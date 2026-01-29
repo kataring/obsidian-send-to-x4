@@ -17,7 +17,7 @@ export const DEFAULT_SETTINGS: SendToX4Settings = {
     x4Ip: '192.168.3.3',
     crosspointIp: '192.168.4.1',
     watchFolderEnabled: false,
-    watchFolder: 'X4 Queue',
+    watchFolder: 'send-to-x4',
 };
 
 export interface ArticleData {

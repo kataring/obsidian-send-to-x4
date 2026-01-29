@@ -58,10 +58,10 @@ export class SendToX4SettingTab extends PluginSettingTab {
             .setName('Watch Folder Path')
             .setDesc('Files in this folder will be automatically added to the queue. Uploaded files are moved to "Sent" subfolder.')
             .addText(text => text
-                .setPlaceholder('X4 Queue')
+                .setPlaceholder('send-to-x4')
                 .setValue(this.plugin.settings.watchFolder)
                 .onChange(async (value) => {
-                    this.plugin.settings.watchFolder = value || 'X4 Queue';
+                    this.plugin.settings.watchFolder = value || 'send-to-x4';
                     await this.plugin.saveSettings();
                     this.plugin.setupWatchFolder();
                 }));
