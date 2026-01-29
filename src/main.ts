@@ -12,6 +12,8 @@ export default class SendToX4Plugin extends Plugin {
     settings: SendToX4Settings = DEFAULT_SETTINGS;
     queueManager: QueueManager = null!;
     private statusBarItem: HTMLElement | null = null;
+    private connectionCheckInterval: number | null = null;
+    private isUploading = false;
 
     async onload() {
         await this.loadSettings();
@@ -38,6 +40,9 @@ export default class SendToX4Plugin extends Plugin {
 
         // Setup watch folder
         this.setupWatchFolder();
+
+        // Start connection check interval (every 30 seconds)
+        this.startConnectionCheck();
 
         // Command: Send current note to X4
         this.addCommand({
@@ -99,6 +104,9 @@ export default class SendToX4Plugin extends Plugin {
     }
 
     onunload() {
+        if (this.connectionCheckInterval) {
+            window.clearInterval(this.connectionCheckInterval);
+        }
         console.log('Send to X4 plugin unloaded');
     }
 
@@ -288,7 +296,7 @@ export default class SendToX4Plugin extends Plugin {
     /**
      * Handle a file that may be in the watch folder
      */
-    private handleWatchFolderFile(file: TAbstractFile) {
+    private async handleWatchFolderFile(file: TAbstractFile) {
         if (!(file instanceof TFile)) return;
         if (file.extension !== 'md') return;
 
@@ -301,6 +309,8 @@ export default class SendToX4Plugin extends Plugin {
             const existingQueue = this.queueManager.getQueue();
             if (!existingQueue.some(item => item.filePath === file.path)) {
                 this.addFileToQueue(file, false);
+                // Try auto-upload
+                this.tryAutoUpload();
             }
         }
     }
@@ -364,6 +374,83 @@ export default class SendToX4Plugin extends Plugin {
             } catch (error) {
                 console.error(`[Send to X4] Failed to move file to Sent folder:`, error);
             }
+        }
+    }
+
+    /**
+     * Start periodic connection check
+     */
+    private startConnectionCheck() {
+        // Check every 30 seconds
+        this.connectionCheckInterval = window.setInterval(() => {
+            this.tryAutoUpload();
+        }, 30000);
+
+        // Also check on startup after a short delay
+        window.setTimeout(() => {
+            this.tryAutoUpload();
+        }, 5000);
+    }
+
+    /**
+     * Try to auto-upload if connected and has pending items
+     */
+    private async tryAutoUpload() {
+        // Skip if already uploading
+        if (this.isUploading) return;
+
+        // Skip if no pending items
+        const queue = this.queueManager.getQueue();
+        const pendingCount = queue.filter(i => i.status === 'pending').length;
+        if (pendingCount === 0) return;
+
+        // Check connection
+        const connected = await this.queueManager.isDeviceConnected(this.settings);
+        if (!connected) {
+            console.log('[Send to X4] Device not connected, skipping auto-upload');
+            return;
+        }
+
+        console.log('[Send to X4] Device connected, starting auto-upload');
+        await this.autoUploadQueue();
+    }
+
+    /**
+     * Auto-upload queue (silent version)
+     */
+    private async autoUploadQueue() {
+        const queue = this.queueManager.getQueue();
+        const pendingCount = queue.filter(i => i.status === 'pending').length;
+
+        if (pendingCount === 0) return;
+
+        this.isUploading = true;
+        const notice = new Notice(`Auto-uploading ${pendingCount} items to X4...`, 0);
+
+        try {
+            const result = await this.queueManager.uploadQueue(
+                this.settings,
+                (current, total) => {
+                    notice.setMessage(`Auto-uploading ${current}/${total}...`);
+                }
+            );
+
+            notice.hide();
+
+            // Move completed files to Sent folder
+            if (this.settings.watchFolderEnabled) {
+                await this.moveCompletedToSent();
+            }
+
+            await this.saveSettings();
+            this.updateStatusBar();
+
+            new Notice(`Auto-upload complete: ${result.success} succeeded, ${result.failed} failed`);
+        } catch (error) {
+            notice.hide();
+            console.error('[Send to X4] Auto-upload error:', error);
+        } finally {
+            this.isUploading = false;
         }
     }
 }

@@ -24,6 +24,22 @@ export class X4Uploader implements Uploader {
     }
 
     /**
+     * Check if X4 is reachable
+     */
+    async isConnected(): Promise<boolean> {
+        try {
+            const response = await requestUrl({
+                url: `${this.listEndpoint}?dir=/`,
+                method: 'GET',
+                throw: false
+            });
+            return response.status >= 200 && response.status < 300;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
      * Upload EPUB to X4 via Obsidian requestUrl
      */
     async uploadEpub(epubData: ArrayBuffer, filename: string, targetFolder: string): Promise<UploadResult> {
