@@ -13,7 +13,7 @@ export interface SendToX4Settings {
 
 export const DEFAULT_SETTINGS: SendToX4Settings = {
     useCrosspointFirmware: false,
-    targetFolder: 'send-to-x4',
+    targetFolder: 'obsidian-to-x4',
     x4Ip: '192.168.3.3',
     crosspointIp: '192.168.4.1',
     watchFolderEnabled: true,
