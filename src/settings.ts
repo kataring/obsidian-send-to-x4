@@ -34,10 +34,10 @@ export class SendToX4SettingTab extends PluginSettingTab {
             .setName('Target Folder')
             .setDesc('Folder name on the X4 device to upload EPUBs to')
             .addText(text => text
-                .setPlaceholder('send-to-x4')
+                .setPlaceholder('obsidian-to-x4')
                 .setValue(this.plugin.settings.targetFolder)
                 .onChange(async (value) => {
-                    this.plugin.settings.targetFolder = value || 'send-to-x4';
+                    this.plugin.settings.targetFolder = value || 'obsidian-to-x4';
                     await this.plugin.saveSettings();
                 }));
 
@@ -58,10 +58,10 @@ export class SendToX4SettingTab extends PluginSettingTab {
             .setName('Watch Folder Path')
             .setDesc('Files in this folder will be automatically added to the queue. Uploaded files are moved to "Sent" subfolder.')
             .addText(text => text
-                .setPlaceholder('send-to-x4')
+                .setPlaceholder('obsidian-to-x4')
                 .setValue(this.plugin.settings.watchFolder)
                 .onChange(async (value) => {
-                    this.plugin.settings.watchFolder = value || 'send-to-x4';
+                    this.plugin.settings.watchFolder = value || 'obsidian-to-x4';
                     await this.plugin.saveSettings();
                     this.plugin.setupWatchFolder();
                 }));
