@@ -1,0 +1,10 @@
+{
+	"id": "send-to-x4",
+	"name": "Send to X4",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Convert Obsidian notes to EPUB and send to Xtenik X4 e-ink reader",
+	"author": "kataring",
+	"authorUrl": "https://github.com/kataring",
+	"isDesktopOnly": false
+}

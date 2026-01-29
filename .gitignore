@@ -1,0 +1,16 @@
+# Build artifacts
+main.js
+*.js.map
+
+# npm
+node_modules
+
+# IDE
+.idea
+.vscode
+
+# OS
+.DS_Store
+
+# obsidian
+data.json
