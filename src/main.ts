@@ -38,6 +38,11 @@ export default class SendToX4Plugin extends Plugin {
         });
         this.updateStatusBar();
 
+        // Add ribbon icon for manual sync
+        this.addRibbonIcon('upload', 'Sync to X4', () => {
+            this.manualSync();
+        });
+
         // Setup watch folder
         this.setupWatchFolder();
 
@@ -375,6 +380,31 @@ export default class SendToX4Plugin extends Plugin {
                 console.error(`[Send to X4] Failed to move file to Sent folder:`, error);
             }
         }
+    }
+
+    /**
+     * Manual sync - check connection and upload if connected
+     */
+    private async manualSync() {
+        const queue = this.queueManager.getQueue();
+        const pendingCount = queue.filter(i => i.status === 'pending').length;
+
+        if (pendingCount === 0) {
+            new Notice('Queue is empty');
+            return;
+        }
+
+        const notice = new Notice('Checking X4 connection...', 0);
+
+        const connected = await this.queueManager.isDeviceConnected(this.settings);
+        notice.hide();
+
+        if (!connected) {
+            new Notice('X4 not connected. Connect to X4 WiFi and try again.');
+            return;
+        }
+
+        await this.uploadQueue();
     }
 
     /**
