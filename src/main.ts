@@ -55,22 +55,6 @@ export default class SendToX4Plugin extends Plugin {
             }
         });
 
-        // Command: Add current note to queue
-        this.addCommand({
-            id: 'add-to-queue',
-            name: 'Add current note to queue',
-            checkCallback: (checking: boolean) => {
-                const activeFile = this.app.workspace.getActiveFile();
-                if (activeFile && activeFile.extension === 'md') {
-                    if (!checking) {
-                        this.addCurrentNoteToQueue();
-                    }
-                    return true;
-                }
-                return false;
-            }
-        });
-
         // Command: Upload queue
         this.addCommand({
             id: 'upload-queue',
@@ -96,7 +80,7 @@ export default class SendToX4Plugin extends Plugin {
             }
         });
 
-        // Add file menu items
+        // Add file menu item
         this.registerEvent(
             this.app.workspace.on('file-menu', (menu, file) => {
                 if (file instanceof TFile && file.extension === 'md') {
@@ -105,14 +89,6 @@ export default class SendToX4Plugin extends Plugin {
                             .setIcon('upload')
                             .onClick(() => {
                                 this.sendFile(file);
-                            });
-                    });
-
-                    menu.addItem((item) => {
-                        item.setTitle('Add to X4 Queue')
-                            .setIcon('list-plus')
-                            .onClick(() => {
-                                this.addFileToQueue(file);
                             });
                     });
                 }
@@ -174,20 +150,7 @@ export default class SendToX4Plugin extends Plugin {
     }
 
     /**
-     * Add current note to queue
-     */
-    private addCurrentNoteToQueue() {
-        const activeFile = this.app.workspace.getActiveFile();
-        if (!activeFile) {
-            new Notice('No active file');
-            return;
-        }
-
-        this.addFileToQueue(activeFile);
-    }
-
-    /**
-     * Add a specific file to the queue
+     * Add a specific file to the queue (used by watch folder)
      */
     private addFileToQueue(file: TFile, silent = false) {
         const item = this.queueManager.addToQueue(file);

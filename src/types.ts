@@ -16,7 +16,7 @@ export const DEFAULT_SETTINGS: SendToX4Settings = {
     targetFolder: 'send-to-x4',
     x4Ip: '192.168.3.3',
     crosspointIp: '192.168.4.1',
-    watchFolderEnabled: false,
+    watchFolderEnabled: true,
     watchFolder: 'send-to-x4',
 };
 
