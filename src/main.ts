@@ -49,11 +49,6 @@ export default class SendToX4Plugin extends Plugin {
             this.activateTreeView();
         });
 
-        // Add ribbon icon for manual sync
-        this.addRibbonIcon('upload', 'Sync to X4', () => {
-            this.manualSync();
-        });
-
         // Command: Send current note to X4
         this.addCommand({
             id: 'send-current-note',
@@ -351,30 +346,5 @@ export default class SendToX4Plugin extends Plugin {
                 await view.refresh();
             }
         }
-    }
-
-    /**
-     * Manual sync - check connection and upload if connected
-     */
-    private async manualSync() {
-        const queue = this.queueManager.getQueue();
-        const pendingCount = queue.filter(i => i.status === 'pending').length;
-
-        if (pendingCount === 0) {
-            new Notice('Queue is empty');
-            return;
-        }
-
-        const notice = new Notice('Checking X4 connection...', 0);
-
-        const connected = await this.queueManager.isDeviceConnected(this.settings);
-        notice.hide();
-
-        if (!connected) {
-            new Notice('X4 not connected. Connect to X4 WiFi and try again.');
-            return;
-        }
-
-        await this.uploadQueue();
     }
 }
