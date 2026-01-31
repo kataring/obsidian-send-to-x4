@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-send-to-x4",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Convert Obsidian notes to EPUB and send to Xtenik X4 e-ink reader",
 	"main": "main.js",
 	"scripts": {

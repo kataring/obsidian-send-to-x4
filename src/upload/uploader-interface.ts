@@ -33,4 +33,12 @@ export interface Uploader {
      * @returns true if successful
      */
     deleteItem(path: string): Promise<boolean>;
+
+    /**
+     * Create a folder on the device
+     * @param folderName - Name of the folder to create
+     * @param parentPath - Parent directory path (e.g., "/" for root)
+     * @returns true if successful
+     */
+    createFolder(folderName: string, parentPath: string): Promise<boolean>;
 }
