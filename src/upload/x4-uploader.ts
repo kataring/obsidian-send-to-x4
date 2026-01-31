@@ -99,20 +99,41 @@ export class X4Uploader implements Uploader {
     }
 
     /**
-     * Check if folder exists and create if not
+     * Check if folder exists and create if not (supports nested folders)
      */
-    private async ensureFolderExists(folderName: string): Promise<boolean> {
+    private async ensureFolderExists(folderPath: string): Promise<boolean> {
         try {
-            console.log('[X4 Upload] Checking if folder exists:', folderName);
-            const exists = await this.folderExists(folderName);
+            console.log('[X4 Upload] Checking if folder exists:', folderPath);
 
-            if (exists) {
-                console.log('[X4 Upload] Folder already exists');
-                return true;
+            // Normalize path: remove leading/trailing slashes and split into segments
+            const normalizedPath = folderPath.replace(/^\/+|\/+$/g, '');
+            if (!normalizedPath) {
+                return true; // Root folder always exists
             }
 
-            console.log('[X4 Upload] Creating folder:', folderName);
-            return await this.createFolder(folderName, '/');
+            const segments = normalizedPath.split('/').filter(s => s.length > 0);
+            console.log('[X4 Upload] Folder segments:', segments);
+
+            // Create each folder level if it doesn't exist
+            let currentPath = '';
+            for (const segment of segments) {
+                const parentPath = currentPath || '/';
+                const exists = await this.folderExistsAt(segment, parentPath);
+
+                if (!exists) {
+                    console.log('[X4 Upload] Creating folder:', segment, 'at', parentPath);
+                    const created = await this.createFolder(segment, parentPath);
+                    if (!created) {
+                        console.error('[X4 Upload] Failed to create folder:', segment);
+                        return false;
+                    }
+                }
+
+                currentPath = currentPath ? `${currentPath}/${segment}` : `/${segment}`;
+            }
+
+            console.log('[X4 Upload] All folders ready');
+            return true;
 
         } catch (error) {
             console.error('[X4 Upload] Error checking/creating folder:', error);
@@ -121,17 +142,17 @@ export class X4Uploader implements Uploader {
     }
 
     /**
-     * Check if folder exists using /list endpoint
+     * Check if folder exists at a specific parent path using /list endpoint
      */
-    private async folderExists(folderName: string): Promise<boolean> {
+    private async folderExistsAt(folderName: string, parentPath: string): Promise<boolean> {
         try {
             const response = await requestUrl({
-                url: `${this.listEndpoint}?dir=/`,
+                url: `${this.listEndpoint}?dir=${encodeURIComponent(parentPath)}`,
                 method: 'GET'
             });
 
             const items = response.json as Array<{ type: string; name: string }>;
-            console.log('[X4 Upload] Root directory contents:', items);
+            console.log('[X4 Upload] Directory contents at', parentPath, ':', items);
 
             const folder = items.find(item =>
                 item.type === 'dir' && item.name === folderName
