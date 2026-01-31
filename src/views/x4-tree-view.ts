@@ -104,15 +104,13 @@ export class X4TreeView extends ItemView {
         // Create tree container
         this.rootEl = container.createDiv({ cls: 'x4-tree-container' });
 
+        // Show initial message (don't connect automatically)
+        const emptyEl = this.rootEl.createDiv({ cls: 'x4-tree-empty' });
+        emptyEl.setText('Click refresh to connect to X4');
+
         // Add styles
         this.addStyles();
-
-        // Initial load (don't block view opening on network errors)
-        try {
-            await this.refresh();
-        } catch (error) {
-            console.error('[X4TreeView] Initial refresh failed:', error);
-        }
+        console.log('[X4TreeView] onOpen completed');
     }
 
     async onClose() {
