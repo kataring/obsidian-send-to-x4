@@ -45,7 +45,11 @@ export default class SendToX4Plugin extends Plugin {
             X4_TREE_VIEW_TYPE,
             (leaf) => {
                 console.log('[Send to X4] Creating X4TreeView instance');
-                return new X4TreeView(leaf, () => this.settings);
+                return new X4TreeView(
+                    leaf,
+                    () => this.settings,
+                    () => (targetFolder: string) => this.showFilePicker(targetFolder)
+                );
             }
         );
         console.log('[Send to X4] View registered');
@@ -292,14 +296,6 @@ export default class SendToX4Plugin extends Plugin {
         if (existingLeaves.length > 0) {
             // Reveal existing view
             workspace.revealLeaf(existingLeaves[0]);
-            // Set up callback and refresh the view
-            const view = existingLeaves[0].view as X4TreeView;
-            if (view) {
-                view.setUploadCallback((targetFolder) => this.showFilePicker(targetFolder));
-                if (typeof view.refresh === 'function') {
-                    await view.refresh();
-                }
-            }
             return;
         }
 
@@ -311,12 +307,6 @@ export default class SendToX4Plugin extends Plugin {
                 active: true
             });
             workspace.revealLeaf(rightLeaf);
-
-            // Set up callback after view is created
-            const view = rightLeaf.view as X4TreeView;
-            if (view) {
-                view.setUploadCallback((targetFolder) => this.showFilePicker(targetFolder));
-            }
         }
     }
 

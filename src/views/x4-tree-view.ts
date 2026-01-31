@@ -27,14 +27,19 @@ export class X4TreeView extends ItemView {
     private isConnected = false;
     private isLoading = false;
     private getSettings: () => SendToX4Settings;
-    private onUploadToFolder: UploadToFolderCallback | null = null;
+    private getUploadCallback: () => UploadToFolderCallback;
     private selectionMode = false;
     private selectedItems: Set<string> = new Set();
 
-    constructor(leaf: WorkspaceLeaf, getSettings: () => SendToX4Settings) {
+    constructor(
+        leaf: WorkspaceLeaf,
+        getSettings: () => SendToX4Settings,
+        getUploadCallback: () => UploadToFolderCallback
+    ) {
         super(leaf);
         console.log('[X4TreeView] Constructor called');
         this.getSettings = getSettings;
+        this.getUploadCallback = getUploadCallback;
         console.log('[X4TreeView] Constructor completed');
     }
 
@@ -42,8 +47,8 @@ export class X4TreeView extends ItemView {
         return this.getSettings();
     }
 
-    setUploadCallback(callback: UploadToFolderCallback) {
-        this.onUploadToFolder = callback;
+    private get uploadCallback(): UploadToFolderCallback {
+        return this.getUploadCallback();
     }
 
     getViewType(): string {
@@ -484,11 +489,9 @@ export class X4TreeView extends ItemView {
             item.setTitle('Upload to this folder')
                 .setIcon('upload')
                 .onClick(() => {
-                    if (this.onUploadToFolder) {
-                        // Remove leading slash for target folder path
-                        const folderPath = node.path.startsWith('/') ? node.path.slice(1) : node.path;
-                        this.onUploadToFolder(folderPath);
-                    }
+                    // Remove leading slash for target folder path
+                    const folderPath = node.path.startsWith('/') ? node.path.slice(1) : node.path;
+                    this.uploadCallback(folderPath);
                 });
         });
 
