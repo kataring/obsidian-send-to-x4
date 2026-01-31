@@ -1,60 +1,60 @@
 # CLAUDE.md
 
-このファイルは Claude Code がこのリポジトリで作業する際のガイダンスを提供します。
+This file provides guidance for Claude Code when working with this repository.
 
-## プロジェクト概要
+## Project Overview
 
-**Send to X4** は、Obsidian のマークダウンノートを EPUB 形式に変換し、WiFi 経由で Xtenik X4 電子ペーパーデバイスに送信する Obsidian プラグインです。
+**Send to X4** is an Obsidian plugin that converts Markdown notes to EPUB format and sends them directly to Xtenik X4 e-ink devices over WiFi.
 
-### 主な機能
+### Key Features
 
-- Markdown → EPUB 2.0 変換（JSZip 使用）
-- WiFi 経由での X4 デバイスへの直接アップロード
-- EPUB ファイルの手動ダウンロード
-- 標準 X4 ファームウェアと CrossPoint カスタムファームウェアの両方に対応
-- アップロードキュー管理（pending/uploading/done/failed）
-- X4 デバイスのファイルブラウザ（ツリービュー）
-- YAML フロントマターからのメタデータ抽出
+- Markdown to EPUB 2.0 conversion (using JSZip)
+- Direct upload to X4 devices over WiFi
+- Manual EPUB file download
+- Support for both standard X4 firmware and CrossPoint custom firmware
+- Upload queue management (pending/uploading/done/failed)
+- X4 device file browser (tree view)
+- Metadata extraction from YAML frontmatter
 
-## プロジェクト構造
+## Project Structure
 
 ```
 src/
-├── main.ts                    # プラグインエントリーポイント
-├── types.ts                   # 型定義
-├── settings.ts                # 設定タブ UI
+├── main.ts                    # Plugin entry point
+├── types.ts                   # Type definitions
+├── settings.ts                # Settings tab UI
 ├── epub/
-│   ├── epub-builder.ts        # EPUB 生成（JSZip）
-│   └── epub-templates.ts      # EPUB XML テンプレート
+│   ├── epub-builder.ts        # EPUB generation (JSZip)
+│   └── epub-templates.ts      # EPUB XML templates
 ├── queue/
-│   └── queue-manager.ts       # キュー管理、ファイル処理
+│   └── queue-manager.ts       # Queue management, file processing
 ├── upload/
-│   ├── uploader-interface.ts  # アップローダーインターフェース
-│   ├── x4-uploader.ts         # 標準 X4 ファームウェア用
-│   └── crosspoint-uploader.ts # CrossPoint ファームウェア用
+│   ├── uploader-interface.ts  # Uploader interface
+│   ├── x4-uploader.ts         # Standard X4 firmware uploader
+│   └── crosspoint-uploader.ts # CrossPoint firmware uploader
 ├── utils/
-│   ├── markdown-converter.ts  # Markdown→XHTML 変換
-│   └── sanitize.ts            # HTML サニタイズ
+│   ├── markdown-converter.ts  # Markdown to XHTML conversion
+│   └── sanitize.ts            # HTML sanitization
 └── views/
-    ├── x4-tree-view.ts        # デバイスファイルツリー表示
-    └── file-picker-modal.ts   # ファイル選択モーダル
+    ├── x4-tree-view.ts        # Device file tree view
+    └── file-picker-modal.ts   # File picker modal
 ```
 
-## 開発コマンド
+## Development Commands
 
 ```bash
-npm install     # 依存関係インストール
-npm run dev     # 開発モード（ウォッチ）
-npm run build   # プロダクションビルド
+npm install     # Install dependencies
+npm run dev     # Development mode (watch)
+npm run build   # Production build
 ```
 
-## ビルドシステム
+## Build System
 
-- **バンドラー**: esbuild
-- **言語**: TypeScript (ES6 ターゲット)
-- **出力**: `main.js`（CommonJS 形式）
+- **Bundler**: esbuild
+- **Language**: TypeScript (ES6 target)
+- **Output**: `main.js` (CommonJS format)
 
-## 主要な型定義
+## Key Type Definitions
 
 ```typescript
 // src/types.ts
@@ -82,40 +82,40 @@ interface ArticleData {
 }
 ```
 
-## アーキテクチャ
+## Architecture
 
-### 処理フロー
+### Processing Flow
 
 ```
-ユーザーアクション → QueueManager.uploadFile()
-  → ファイル読み込み
-  → メタデータ抽出（YAML フロントマター）
-  → Markdown → XHTML 変換
-  → HTML サニタイズ
-  → EpubBuilder.build()（ZIP 構造作成）
-  → Uploader 選択（X4 or CrossPoint）
-  → HTTP マルチパートでアップロード
+User Action → QueueManager.uploadFile()
+  → Read file
+  → Extract metadata (YAML frontmatter)
+  → Convert Markdown to XHTML
+  → Sanitize HTML
+  → EpubBuilder.build() (create ZIP structure)
+  → Select Uploader (X4 or CrossPoint)
+  → Upload via HTTP multipart
 ```
 
-### ファームウェア別エンドポイント
+### Firmware-specific Endpoints
 
-| ファームウェア | ファイル一覧 | アップロード | 削除 |
-|---------------|-------------|-------------|------|
-| 標準 X4 | GET `/list` | POST `/edit` | DELETE `/edit` |
-| CrossPoint | GET `/api/files` | POST `/upload` | DELETE (未実装) |
+| Firmware | List Files | Upload | Delete |
+|----------|-----------|--------|--------|
+| Standard X4 | GET `/list` | POST `/edit` | DELETE `/edit` |
+| CrossPoint | GET `/api/files` | POST `/upload` | DELETE (not implemented) |
 
-## コマンド一覧
+## Commands
 
-| コマンド ID | 説明 |
-|------------|------|
-| `send-current-note` | 現在のノートを X4 に送信 |
-| `upload-queue` | キュー内の全アイテムをアップロード |
-| `download-epub` | 現在のノートを EPUB としてダウンロード |
-| `open-x4-files` | X4 ファイルブラウザを開く |
+| Command ID | Description |
+|------------|-------------|
+| `send-current-note` | Send current note to X4 |
+| `upload-queue` | Upload all items in queue |
+| `download-epub` | Download current note as EPUB |
+| `open-x4-files` | Open X4 file browser |
 
-## 依存関係
+## Dependencies
 
-- `jszip` (3.10.1): EPUB の ZIP 構造生成
-- `obsidian`: Obsidian API（devDependency）
-- `esbuild`: バンドラー
-- `typescript`: 型チェック
+- `jszip` (3.10.1): EPUB ZIP structure generation
+- `obsidian`: Obsidian API (devDependency)
+- `esbuild`: Bundler
+- `typescript`: Type checking
