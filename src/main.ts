@@ -326,18 +326,26 @@ export default class SendToX4Plugin extends Plugin {
     private async uploadFilesToFolder(files: TFile[], targetFolder: string) {
         if (files.length === 0) return;
 
+        console.log(`[Send to X4] uploadFilesToFolder: ${files.length} files to ${targetFolder}`);
         const notice = new Notice(`Uploading ${files.length} files to ${targetFolder}...`, 0);
         let successCount = 0;
         let failCount = 0;
 
-        for (const file of files) {
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
             try {
-                notice.setMessage(`Uploading ${file.basename}...`);
+                console.log(`[Send to X4] Uploading file ${i + 1}/${files.length}: ${file.basename}`);
+                notice.setMessage(`Uploading ${i + 1}/${files.length}: ${file.basename}...`);
                 const success = await this.queueManager.uploadFileToFolder(file, this.settings, targetFolder);
+                console.log(`[Send to X4] Upload result for ${file.basename}: ${success}`);
                 if (success) {
                     successCount++;
                 } else {
                     failCount++;
+                }
+                // Add delay between uploads for X4 device stability
+                if (i < files.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
             } catch (error) {
                 console.error(`[Send to X4] Failed to upload ${file.basename}:`, error);
@@ -346,6 +354,7 @@ export default class SendToX4Plugin extends Plugin {
         }
 
         notice.hide();
+        console.log(`[Send to X4] Upload complete: ${successCount} succeeded, ${failCount} failed`);
         new Notice(`Upload complete: ${successCount} succeeded, ${failCount} failed`);
 
         // Refresh tree view
