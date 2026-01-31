@@ -6,6 +6,8 @@
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"install-plugin": "node scripts/install.mjs",
+		"build-install": "npm run build && npm run install-plugin",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"release": "node scripts/release.mjs"
 	},
