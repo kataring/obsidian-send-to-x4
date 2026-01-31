@@ -152,8 +152,18 @@ export class X4Uploader implements Uploader {
      */
     async createFolder(folderName: string, parentPath: string = '/'): Promise<boolean> {
         try {
-            const normalizedParent = parentPath.endsWith('/') ? parentPath : parentPath + '/';
-            const fullPath = normalizedParent === '/' ? `/${folderName}/` : `${normalizedParent}${folderName}/`;
+            // Build full path: /parentPath/folderName/
+            let fullPath: string;
+            if (parentPath === '/' || parentPath === '') {
+                fullPath = `/${folderName}/`;
+            } else {
+                const cleanParent = parentPath.startsWith('/') ? parentPath : '/' + parentPath;
+                const normalizedParent = cleanParent.endsWith('/') ? cleanParent : cleanParent + '/';
+                fullPath = `${normalizedParent}${folderName}/`;
+            }
+
+            console.log('[X4 Upload] Creating folder at path:', fullPath);
+
             const boundary = this.generateBoundary();
             const body = this.buildFolderCreateBody(fullPath, boundary);
 
