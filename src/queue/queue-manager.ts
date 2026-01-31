@@ -87,21 +87,29 @@ export class QueueManager {
      */
     async uploadFileToFolder(file: TFile, settings: SendToX4Settings, targetFolder: string): Promise<boolean> {
         try {
+            console.log('[QueueManager] uploadFileToFolder called for:', file.path, 'to folder:', targetFolder);
+
             // Read the file content
             const content = await this.app.vault.read(file);
+            console.log('[QueueManager] File content length:', content.length);
 
             // Build article data
             const articleData = await this.buildArticleData(file, content);
+            console.log('[QueueManager] Article data built:', articleData.title);
 
             // Build EPUB
             const epubData = await this.epubBuilder.build(articleData);
             const filename = this.epubBuilder.generateFilename(articleData);
+            console.log('[QueueManager] EPUB built:', filename, 'size:', epubData.byteLength);
 
             // Get appropriate uploader
             const uploader = this.getUploader(settings);
+            console.log('[QueueManager] Using uploader:', settings.useCrosspointFirmware ? 'CrossPoint' : 'X4');
 
             // Upload
+            console.log('[QueueManager] Starting upload...');
             const result = await uploader.uploadEpub(epubData, filename, targetFolder);
+            console.log('[QueueManager] Upload result:', result);
 
             return result.success;
         } catch (error) {

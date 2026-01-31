@@ -112,7 +112,7 @@ export class X4Uploader implements Uploader {
             }
 
             console.log('[X4 Upload] Creating folder:', folderName);
-            return await this.createFolder(folderName);
+            return await this.createFolder(folderName, '/');
 
         } catch (error) {
             console.error('[X4 Upload] Error checking/creating folder:', error);
@@ -147,11 +147,25 @@ export class X4Uploader implements Uploader {
 
     /**
      * Create a folder using PUT /edit with multipart form data
+     * @param folderName - Name of the folder to create
+     * @param parentPath - Parent directory path (e.g., "/" for root)
      */
-    private async createFolder(folderName: string): Promise<boolean> {
+    async createFolder(folderName: string, parentPath: string = '/'): Promise<boolean> {
         try {
+            // Build full path: /parentPath/folderName/
+            let fullPath: string;
+            if (parentPath === '/' || parentPath === '') {
+                fullPath = `/${folderName}/`;
+            } else {
+                const cleanParent = parentPath.startsWith('/') ? parentPath : '/' + parentPath;
+                const normalizedParent = cleanParent.endsWith('/') ? cleanParent : cleanParent + '/';
+                fullPath = `${normalizedParent}${folderName}/`;
+            }
+
+            console.log('[X4 Upload] Creating folder at path:', fullPath);
+
             const boundary = this.generateBoundary();
-            const body = this.buildFolderCreateBody(`/${folderName}/`, boundary);
+            const body = this.buildFolderCreateBody(fullPath, boundary);
 
             const response = await requestUrl({
                 url: this.uploadEndpoint,

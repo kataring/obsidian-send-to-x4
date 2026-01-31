@@ -17,3 +17,6 @@ data.json
 
 # Release artifacts
 *.zip
+
+# Local config
+.env

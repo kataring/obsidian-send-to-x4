@@ -112,7 +112,7 @@ export class CrossPointUploader implements Uploader {
             }
 
             console.log('[CrossPoint Upload] Creating folder:', folderName);
-            return await this.createFolder(folderName);
+            return await this.createFolder(folderName, '/');
 
         } catch (error) {
             console.error('[CrossPoint Upload] Error checking/creating folder:', error);
@@ -147,11 +147,13 @@ export class CrossPointUploader implements Uploader {
 
     /**
      * Create a folder using POST /mkdir with multipart form data
+     * @param folderName - Name of the folder to create
+     * @param parentPath - Parent directory path (e.g., "/" for root)
      */
-    private async createFolder(folderName: string): Promise<boolean> {
+    async createFolder(folderName: string, parentPath: string = '/'): Promise<boolean> {
         try {
             const boundary = this.generateBoundary();
-            const body = this.buildMkdirBody(folderName, '/', boundary);
+            const body = this.buildMkdirBody(folderName, parentPath, boundary);
 
             const response = await requestUrl({
                 url: this.mkdirEndpoint,
