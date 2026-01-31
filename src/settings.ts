@@ -30,6 +30,17 @@ export class SendToX4SettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
+        new Setting(containerEl)
+            .setName('Target Folder')
+            .setDesc('Folder name on the X4 device to upload EPUBs to')
+            .addText(text => text
+                .setPlaceholder('obsidian-to-x4')
+                .setValue(this.plugin.settings.targetFolder)
+                .onChange(async (value) => {
+                    this.plugin.settings.targetFolder = value || 'obsidian-to-x4';
+                    await this.plugin.saveSettings();
+                }));
+
         containerEl.createEl('h3', { text: 'Network Settings' });
 
         new Setting(containerEl)
