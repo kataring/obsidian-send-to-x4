@@ -9,7 +9,7 @@
  */
 
 import { requestUrl, RequestUrlParam } from 'obsidian';
-import { UploadResult } from '../types';
+import { UploadResult, FileItem } from '../types';
 import { Uploader } from './uploader-interface';
 
 export class X4Uploader implements Uploader {
@@ -36,6 +36,35 @@ export class X4Uploader implements Uploader {
             return response.status >= 200 && response.status < 300;
         } catch {
             return false;
+        }
+    }
+
+    /**
+     * List directory contents on X4
+     * X4 API returns: { type: 'dir'|'file', name: string }[]
+     */
+    async listDirectory(path: string): Promise<FileItem[] | null> {
+        try {
+            const response = await requestUrl({
+                url: `${this.listEndpoint}?dir=${encodeURIComponent(path)}`,
+                method: 'GET',
+                throw: false
+            });
+
+            if (response.status < 200 || response.status >= 300) {
+                console.error('[X4] Failed to list directory:', response.status);
+                return null;
+            }
+
+            const items = response.json as Array<{ type: string; name: string; size?: number }>;
+            return items.map(item => ({
+                name: item.name,
+                isDirectory: item.type === 'dir',
+                size: item.size
+            }));
+        } catch (error) {
+            console.error('[X4] Error listing directory:', error);
+            return null;
         }
     }
 
@@ -220,6 +249,46 @@ export class X4Uploader implements Uploader {
      * Build multipart body for folder creation
      */
     private buildFolderCreateBody(path: string, boundary: string): ArrayBuffer {
+        const encoder = new TextEncoder();
+        const body = `--${boundary}\r\n` +
+            `Content-Disposition: form-data; name="path"\r\n\r\n` +
+            `${path}\r\n` +
+            `--${boundary}--\r\n`;
+
+        return encoder.encode(body).buffer;
+    }
+
+    /**
+     * Delete a file or folder on X4
+     * Uses DELETE /edit with path parameter
+     */
+    async deleteItem(path: string): Promise<boolean> {
+        try {
+            const boundary = this.generateBoundary();
+            const body = this.buildDeleteBody(path, boundary);
+
+            const response = await requestUrl({
+                url: this.uploadEndpoint,
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': `multipart/form-data; boundary=${boundary}`
+                },
+                body: body,
+                throw: false
+            });
+
+            console.log('[X4] Delete response:', response.status);
+            return response.status >= 200 && response.status < 300;
+        } catch (error) {
+            console.error('[X4] Error deleting item:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Build multipart body for delete operation
+     */
+    private buildDeleteBody(path: string, boundary: string): ArrayBuffer {
         const encoder = new TextEncoder();
         const body = `--${boundary}\r\n` +
             `Content-Disposition: form-data; name="path"\r\n\r\n` +

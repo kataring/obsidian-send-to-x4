@@ -9,7 +9,7 @@
  */
 
 import { requestUrl } from 'obsidian';
-import { UploadResult } from '../types';
+import { UploadResult, FileItem } from '../types';
 import { Uploader } from './uploader-interface';
 
 export class CrossPointUploader implements Uploader {
@@ -38,6 +38,35 @@ export class CrossPointUploader implements Uploader {
             return response.status >= 200 && response.status < 300;
         } catch {
             return false;
+        }
+    }
+
+    /**
+     * List directory contents on CrossPoint device
+     * CrossPoint API returns: { isDirectory: boolean, name: string }[]
+     */
+    async listDirectory(path: string): Promise<FileItem[] | null> {
+        try {
+            const response = await requestUrl({
+                url: `${this.listEndpoint}?path=${encodeURIComponent(path)}`,
+                method: 'GET',
+                throw: false
+            });
+
+            if (response.status < 200 || response.status >= 300) {
+                console.error('[CrossPoint] Failed to list directory:', response.status);
+                return null;
+            }
+
+            const items = response.json as Array<{ isDirectory: boolean; name: string; size?: number }>;
+            return items.map(item => ({
+                name: item.name,
+                isDirectory: item.isDirectory,
+                size: item.size
+            }));
+        } catch (error) {
+            console.error('[CrossPoint] Error listing directory:', error);
+            return null;
         }
     }
 
@@ -227,6 +256,46 @@ export class CrossPointUploader implements Uploader {
             `Content-Disposition: form-data; name="name"\r\n\r\n` +
             `${name}\r\n` +
             `--${boundary}\r\n` +
+            `Content-Disposition: form-data; name="path"\r\n\r\n` +
+            `${path}\r\n` +
+            `--${boundary}--\r\n`;
+
+        return encoder.encode(body).buffer;
+    }
+
+    /**
+     * Delete a file or folder on CrossPoint device
+     * Uses POST /delete endpoint
+     */
+    async deleteItem(path: string): Promise<boolean> {
+        try {
+            const boundary = this.generateBoundary();
+            const body = this.buildDeleteBody(path, boundary);
+
+            const response = await requestUrl({
+                url: `${this.baseUrl}/delete`,
+                method: 'POST',
+                headers: {
+                    'Content-Type': `multipart/form-data; boundary=${boundary}`
+                },
+                body: body,
+                throw: false
+            });
+
+            console.log('[CrossPoint] Delete response:', response.status);
+            return response.status >= 200 && response.status < 300;
+        } catch (error) {
+            console.error('[CrossPoint] Error deleting item:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Build multipart body for delete operation
+     */
+    private buildDeleteBody(path: string, boundary: string): ArrayBuffer {
+        const encoder = new TextEncoder();
+        const body = `--${boundary}\r\n` +
             `Content-Disposition: form-data; name="path"\r\n\r\n` +
             `${path}\r\n` +
             `--${boundary}--\r\n`;

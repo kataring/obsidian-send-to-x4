@@ -7,6 +7,8 @@ import { App, Plugin, TFile, TFolder, TAbstractFile, Notice, MarkdownView } from
 import { SendToX4Settings, DEFAULT_SETTINGS, QueueItem } from './types';
 import { SendToX4SettingTab } from './settings';
 import { QueueManager } from './queue/queue-manager';
+import { X4TreeView, X4_TREE_VIEW_TYPE } from './views/x4-tree-view';
+import { FilePickerModal } from './views/file-picker-modal';
 
 export default class SendToX4Plugin extends Plugin {
     settings: SendToX4Settings = DEFAULT_SETTINGS;
@@ -27,6 +29,12 @@ export default class SendToX4Plugin extends Plugin {
             this.queueManager.loadQueue(savedData.queue);
         }
 
+        // Register X4 Tree View
+        this.registerView(
+            X4_TREE_VIEW_TYPE,
+            (leaf) => new X4TreeView(leaf, () => this.settings)
+        );
+
         // Add settings tab
         this.addSettingTab(new SendToX4SettingTab(this.app, this));
 
@@ -37,6 +45,11 @@ export default class SendToX4Plugin extends Plugin {
             this.uploadQueue();
         });
         this.updateStatusBar();
+
+        // Add ribbon icon for X4 file browser
+        this.addRibbonIcon('hard-drive', 'X4 Files', () => {
+            this.activateTreeView();
+        });
 
         // Add ribbon icon for manual sync
         this.addRibbonIcon('upload', 'Sync to X4', () => {
@@ -90,6 +103,15 @@ export default class SendToX4Plugin extends Plugin {
             }
         });
 
+        // Command: Open X4 file browser
+        this.addCommand({
+            id: 'open-x4-files',
+            name: 'Open X4 file browser',
+            callback: () => {
+                this.activateTreeView();
+            }
+        });
+
         // Add file menu item
         this.registerEvent(
             this.app.workspace.on('file-menu', (menu, file) => {
@@ -112,6 +134,8 @@ export default class SendToX4Plugin extends Plugin {
         if (this.connectionCheckInterval) {
             window.clearInterval(this.connectionCheckInterval);
         }
+        // Detach tree view leaves
+        this.app.workspace.detachLeavesOfType(X4_TREE_VIEW_TYPE);
         console.log('Send to X4 plugin unloaded');
     }
 
@@ -378,6 +402,93 @@ export default class SendToX4Plugin extends Plugin {
                 item.filePath = newPath;
             } catch (error) {
                 console.error(`[Send to X4] Failed to move file to Sent folder:`, error);
+            }
+        }
+    }
+
+    /**
+     * Activate the X4 tree view in the right sidebar
+     */
+    async activateTreeView() {
+        const { workspace } = this.app;
+
+        // Check if view is already open
+        const existingLeaves = workspace.getLeavesOfType(X4_TREE_VIEW_TYPE);
+        if (existingLeaves.length > 0) {
+            // Reveal existing view
+            workspace.revealLeaf(existingLeaves[0]);
+            // Set up callback and refresh the view
+            const view = existingLeaves[0].view as X4TreeView;
+            if (view) {
+                view.setUploadCallback((targetFolder) => this.showFilePicker(targetFolder));
+                if (typeof view.refresh === 'function') {
+                    await view.refresh();
+                }
+            }
+            return;
+        }
+
+        // Create new view in right sidebar
+        const rightLeaf = workspace.getRightLeaf(false);
+        if (rightLeaf) {
+            await rightLeaf.setViewState({
+                type: X4_TREE_VIEW_TYPE,
+                active: true
+            });
+            workspace.revealLeaf(rightLeaf);
+
+            // Set up callback after view is created
+            const view = rightLeaf.view as X4TreeView;
+            if (view) {
+                view.setUploadCallback((targetFolder) => this.showFilePicker(targetFolder));
+            }
+        }
+    }
+
+    /**
+     * Show file picker modal to select notes for upload
+     */
+    private showFilePicker(targetFolder: string) {
+        const modal = new FilePickerModal(this.app, targetFolder, async (files) => {
+            await this.uploadFilesToFolder(files, targetFolder);
+        });
+        modal.open();
+    }
+
+    /**
+     * Upload selected files to the specified folder on X4
+     */
+    private async uploadFilesToFolder(files: TFile[], targetFolder: string) {
+        if (files.length === 0) return;
+
+        const notice = new Notice(`Uploading ${files.length} files to ${targetFolder}...`, 0);
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const file of files) {
+            try {
+                notice.setMessage(`Uploading ${file.basename}...`);
+                const success = await this.queueManager.uploadFileToFolder(file, this.settings, targetFolder);
+                if (success) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            } catch (error) {
+                console.error(`[Send to X4] Failed to upload ${file.basename}:`, error);
+                failCount++;
+            }
+        }
+
+        notice.hide();
+        new Notice(`Upload complete: ${successCount} succeeded, ${failCount} failed`);
+
+        // Refresh tree view
+        const existingLeaves = this.app.workspace.getLeavesOfType(X4_TREE_VIEW_TYPE);
+        if (existingLeaves.length > 0) {
+            const view = existingLeaves[0].view as X4TreeView;
+            if (view && typeof view.refresh === 'function') {
+                await view.refresh();
             }
         }
     }
