@@ -47,3 +47,9 @@ export interface EpubMetadata {
     date: string;
     uuid: string;
 }
+
+export interface FileItem {
+    name: string;
+    isDirectory: boolean;
+    size?: number;
+}

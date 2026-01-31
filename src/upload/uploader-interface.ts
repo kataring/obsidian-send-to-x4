@@ -2,7 +2,7 @@
  * Common interface for uploaders
  */
 
-import { UploadResult } from '../types';
+import { UploadResult, FileItem } from '../types';
 
 export interface Uploader {
     /**
@@ -19,4 +19,11 @@ export interface Uploader {
      * @returns Upload result
      */
     uploadEpub(epubData: ArrayBuffer, filename: string, targetFolder: string): Promise<UploadResult>;
+
+    /**
+     * List directory contents on the device
+     * @param path - Directory path to list (e.g., "/" for root)
+     * @returns Array of file items or null if failed
+     */
+    listDirectory(path: string): Promise<FileItem[] | null>;
 }

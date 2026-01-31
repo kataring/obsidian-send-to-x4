@@ -9,7 +9,7 @@
  */
 
 import { requestUrl } from 'obsidian';
-import { UploadResult } from '../types';
+import { UploadResult, FileItem } from '../types';
 import { Uploader } from './uploader-interface';
 
 export class CrossPointUploader implements Uploader {
@@ -38,6 +38,35 @@ export class CrossPointUploader implements Uploader {
             return response.status >= 200 && response.status < 300;
         } catch {
             return false;
+        }
+    }
+
+    /**
+     * List directory contents on CrossPoint device
+     * CrossPoint API returns: { isDirectory: boolean, name: string }[]
+     */
+    async listDirectory(path: string): Promise<FileItem[] | null> {
+        try {
+            const response = await requestUrl({
+                url: `${this.listEndpoint}?path=${encodeURIComponent(path)}`,
+                method: 'GET',
+                throw: false
+            });
+
+            if (response.status < 200 || response.status >= 300) {
+                console.error('[CrossPoint] Failed to list directory:', response.status);
+                return null;
+            }
+
+            const items = response.json as Array<{ isDirectory: boolean; name: string; size?: number }>;
+            return items.map(item => ({
+                name: item.name,
+                isDirectory: item.isDirectory,
+                size: item.size
+            }));
+        } catch (error) {
+            console.error('[CrossPoint] Error listing directory:', error);
+            return null;
         }
     }
 
