@@ -151,10 +151,13 @@ export default class SendToX4Plugin extends Plugin {
      * Send a specific file to X4
      */
     private async sendFile(file: TFile) {
+        console.log('[Send to X4] sendFile called for:', file.path);
         const notice = new Notice(`Sending "${file.basename}" to X4...`, 0);
 
         try {
+            console.log('[Send to X4] Calling queueManager.uploadFile...');
             const success = await this.queueManager.uploadFile(file, this.settings);
+            console.log('[Send to X4] uploadFile result:', success);
 
             notice.hide();
 
