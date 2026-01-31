@@ -79,6 +79,13 @@ export class QueueManager {
      * Upload a single file to X4
      */
     async uploadFile(file: TFile, settings: SendToX4Settings): Promise<boolean> {
+        return this.uploadFileToFolder(file, settings, settings.targetFolder);
+    }
+
+    /**
+     * Upload a single file to a specific folder on X4
+     */
+    async uploadFileToFolder(file: TFile, settings: SendToX4Settings, targetFolder: string): Promise<boolean> {
         try {
             // Read the file content
             const content = await this.app.vault.read(file);
@@ -94,7 +101,7 @@ export class QueueManager {
             const uploader = this.getUploader(settings);
 
             // Upload
-            const result = await uploader.uploadEpub(epubData, filename, settings.targetFolder);
+            const result = await uploader.uploadEpub(epubData, filename, targetFolder);
 
             return result.success;
         } catch (error) {

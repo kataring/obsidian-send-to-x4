@@ -26,4 +26,11 @@ export interface Uploader {
      * @returns Array of file items or null if failed
      */
     listDirectory(path: string): Promise<FileItem[] | null>;
+
+    /**
+     * Delete a file or folder on the device
+     * @param path - Path to delete
+     * @returns true if successful
+     */
+    deleteItem(path: string): Promise<boolean>;
 }

@@ -8,6 +8,7 @@ import { SendToX4Settings, DEFAULT_SETTINGS, QueueItem } from './types';
 import { SendToX4SettingTab } from './settings';
 import { QueueManager } from './queue/queue-manager';
 import { X4TreeView, X4_TREE_VIEW_TYPE } from './views/x4-tree-view';
+import { FilePickerModal } from './views/file-picker-modal';
 
 export default class SendToX4Plugin extends Plugin {
     settings: SendToX4Settings = DEFAULT_SETTINGS;
@@ -416,10 +417,13 @@ export default class SendToX4Plugin extends Plugin {
         if (existingLeaves.length > 0) {
             // Reveal existing view
             workspace.revealLeaf(existingLeaves[0]);
-            // Refresh the view
+            // Set up callback and refresh the view
             const view = existingLeaves[0].view as X4TreeView;
-            if (view && typeof view.refresh === 'function') {
-                await view.refresh();
+            if (view) {
+                view.setUploadCallback((targetFolder) => this.showFilePicker(targetFolder));
+                if (typeof view.refresh === 'function') {
+                    await view.refresh();
+                }
             }
             return;
         }
@@ -432,6 +436,60 @@ export default class SendToX4Plugin extends Plugin {
                 active: true
             });
             workspace.revealLeaf(rightLeaf);
+
+            // Set up callback after view is created
+            const view = rightLeaf.view as X4TreeView;
+            if (view) {
+                view.setUploadCallback((targetFolder) => this.showFilePicker(targetFolder));
+            }
+        }
+    }
+
+    /**
+     * Show file picker modal to select notes for upload
+     */
+    private showFilePicker(targetFolder: string) {
+        const modal = new FilePickerModal(this.app, targetFolder, async (files) => {
+            await this.uploadFilesToFolder(files, targetFolder);
+        });
+        modal.open();
+    }
+
+    /**
+     * Upload selected files to the specified folder on X4
+     */
+    private async uploadFilesToFolder(files: TFile[], targetFolder: string) {
+        if (files.length === 0) return;
+
+        const notice = new Notice(`Uploading ${files.length} files to ${targetFolder}...`, 0);
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const file of files) {
+            try {
+                notice.setMessage(`Uploading ${file.basename}...`);
+                const success = await this.queueManager.uploadFileToFolder(file, this.settings, targetFolder);
+                if (success) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            } catch (error) {
+                console.error(`[Send to X4] Failed to upload ${file.basename}:`, error);
+                failCount++;
+            }
+        }
+
+        notice.hide();
+        new Notice(`Upload complete: ${successCount} succeeded, ${failCount} failed`);
+
+        // Refresh tree view
+        const existingLeaves = this.app.workspace.getLeavesOfType(X4_TREE_VIEW_TYPE);
+        if (existingLeaves.length > 0) {
+            const view = existingLeaves[0].view as X4TreeView;
+            if (view && typeof view.refresh === 'function') {
+                await view.refresh();
+            }
         }
     }
 

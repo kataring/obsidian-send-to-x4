@@ -264,6 +264,46 @@ export class CrossPointUploader implements Uploader {
     }
 
     /**
+     * Delete a file or folder on CrossPoint device
+     * Uses POST /delete endpoint
+     */
+    async deleteItem(path: string): Promise<boolean> {
+        try {
+            const boundary = this.generateBoundary();
+            const body = this.buildDeleteBody(path, boundary);
+
+            const response = await requestUrl({
+                url: `${this.baseUrl}/delete`,
+                method: 'POST',
+                headers: {
+                    'Content-Type': `multipart/form-data; boundary=${boundary}`
+                },
+                body: body,
+                throw: false
+            });
+
+            console.log('[CrossPoint] Delete response:', response.status);
+            return response.status >= 200 && response.status < 300;
+        } catch (error) {
+            console.error('[CrossPoint] Error deleting item:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Build multipart body for delete operation
+     */
+    private buildDeleteBody(path: string, boundary: string): ArrayBuffer {
+        const encoder = new TextEncoder();
+        const body = `--${boundary}\r\n` +
+            `Content-Disposition: form-data; name="path"\r\n\r\n` +
+            `${path}\r\n` +
+            `--${boundary}--\r\n`;
+
+        return encoder.encode(body).buffer;
+    }
+
+    /**
      * Generate a unique boundary for multipart form data
      */
     private generateBoundary(): string {

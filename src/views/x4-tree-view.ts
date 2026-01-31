@@ -2,7 +2,7 @@
  * X4 Tree View - Shows X4 device file structure in a sidebar
  */
 
-import { ItemView, WorkspaceLeaf, setIcon } from 'obsidian';
+import { ItemView, WorkspaceLeaf, setIcon, Menu, Notice } from 'obsidian';
 import { FileItem, SendToX4Settings } from '../types';
 import { Uploader } from '../upload/uploader-interface';
 import { X4Uploader } from '../upload/x4-uploader';
@@ -19,6 +19,8 @@ interface TreeNode {
     expanded?: boolean;
 }
 
+export type UploadToFolderCallback = (targetFolder: string) => void;
+
 export class X4TreeView extends ItemView {
     private settings: SendToX4Settings;
     private rootEl: HTMLElement | null = null;
@@ -26,11 +28,16 @@ export class X4TreeView extends ItemView {
     private isConnected = false;
     private isLoading = false;
     private getSettings: () => SendToX4Settings;
+    private onUploadToFolder: UploadToFolderCallback | null = null;
 
     constructor(leaf: WorkspaceLeaf, getSettings: () => SendToX4Settings) {
         super(leaf);
         this.getSettings = getSettings;
         this.settings = getSettings();
+    }
+
+    setUploadCallback(callback: UploadToFolderCallback) {
+        this.onUploadToFolder = callback;
     }
 
     getViewType(): string {
@@ -295,9 +302,26 @@ export class X4TreeView extends ItemView {
                 e.stopPropagation();
                 this.toggleNode(node, itemEl);
             });
+
+            // Context menu for folders
+            itemEl.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                this.showFolderContextMenu(e, node);
+            });
+
+            // Click to expand/collapse
+            itemEl.addEventListener('click', () => {
+                this.toggleNode(node, itemEl);
+            });
         } else {
             // Placeholder for alignment
             itemEl.createDiv({ cls: 'x4-tree-item-toggle' });
+
+            // Context menu for files
+            itemEl.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                this.showFileContextMenu(e, node);
+            });
         }
 
         // Icon
@@ -326,6 +350,129 @@ export class X4TreeView extends ItemView {
                 this.renderNode(child, childrenEl);
             }
         }
+    }
+
+    private showFolderContextMenu(event: MouseEvent, node: TreeNode) {
+        const menu = new Menu();
+
+        menu.addItem((item) => {
+            item.setTitle('Upload to this folder')
+                .setIcon('upload')
+                .onClick(() => {
+                    if (this.onUploadToFolder) {
+                        // Remove leading slash for target folder path
+                        const folderPath = node.path.startsWith('/') ? node.path.slice(1) : node.path;
+                        this.onUploadToFolder(folderPath);
+                    }
+                });
+        });
+
+        menu.addSeparator();
+
+        menu.addItem((item) => {
+            item.setTitle('Delete folder')
+                .setIcon('trash')
+                .onClick(() => {
+                    this.confirmAndDelete(node);
+                });
+        });
+
+        menu.showAtMouseEvent(event);
+    }
+
+    private showFileContextMenu(event: MouseEvent, node: TreeNode) {
+        const menu = new Menu();
+
+        menu.addItem((item) => {
+            item.setTitle('Delete file')
+                .setIcon('trash')
+                .onClick(() => {
+                    this.confirmAndDelete(node);
+                });
+        });
+
+        menu.showAtMouseEvent(event);
+    }
+
+    private async confirmAndDelete(node: TreeNode) {
+        const itemType = node.isDirectory ? 'folder' : 'file';
+
+        // Create confirmation modal
+        const confirmEl = document.createElement('div');
+        confirmEl.className = 'x4-delete-confirm';
+        confirmEl.innerHTML = `
+            <div class="x4-delete-confirm-content">
+                <p>Delete ${itemType} "${node.name}"?</p>
+                ${node.isDirectory ? '<p class="x4-delete-warning">This will delete all contents inside the folder.</p>' : ''}
+                <div class="x4-delete-buttons">
+                    <button class="x4-delete-cancel">Cancel</button>
+                    <button class="x4-delete-confirm-btn mod-warning">Delete</button>
+                </div>
+            </div>
+        `;
+
+        // Add styles for confirm dialog
+        const style = document.createElement('style');
+        style.textContent = `
+            .x4-delete-confirm {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+            }
+            .x4-delete-confirm-content {
+                background: var(--background-primary);
+                padding: 20px;
+                border-radius: 8px;
+                max-width: 400px;
+            }
+            .x4-delete-warning {
+                color: var(--text-error);
+                font-size: 13px;
+            }
+            .x4-delete-buttons {
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+                margin-top: 16px;
+            }
+        `;
+        document.head.appendChild(style);
+        document.body.appendChild(confirmEl);
+
+        return new Promise<void>((resolve) => {
+            const cancelBtn = confirmEl.querySelector('.x4-delete-cancel');
+            const confirmBtn = confirmEl.querySelector('.x4-delete-confirm-btn');
+
+            const cleanup = () => {
+                confirmEl.remove();
+                style.remove();
+                resolve();
+            };
+
+            cancelBtn?.addEventListener('click', cleanup);
+
+            confirmBtn?.addEventListener('click', async () => {
+                const notice = new Notice(`Deleting ${node.name}...`, 0);
+                const uploader = this.getUploader();
+                const success = await uploader.deleteItem(node.path);
+                notice.hide();
+
+                if (success) {
+                    new Notice(`Deleted ${node.name}`);
+                    await this.refresh();
+                } else {
+                    new Notice(`Failed to delete ${node.name}`);
+                }
+                cleanup();
+            });
+        });
     }
 
     private async toggleNode(node: TreeNode, itemEl: HTMLElement) {

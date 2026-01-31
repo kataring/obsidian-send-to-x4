@@ -259,6 +259,46 @@ export class X4Uploader implements Uploader {
     }
 
     /**
+     * Delete a file or folder on X4
+     * Uses DELETE /edit with path parameter
+     */
+    async deleteItem(path: string): Promise<boolean> {
+        try {
+            const boundary = this.generateBoundary();
+            const body = this.buildDeleteBody(path, boundary);
+
+            const response = await requestUrl({
+                url: this.uploadEndpoint,
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': `multipart/form-data; boundary=${boundary}`
+                },
+                body: body,
+                throw: false
+            });
+
+            console.log('[X4] Delete response:', response.status);
+            return response.status >= 200 && response.status < 300;
+        } catch (error) {
+            console.error('[X4] Error deleting item:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Build multipart body for delete operation
+     */
+    private buildDeleteBody(path: string, boundary: string): ArrayBuffer {
+        const encoder = new TextEncoder();
+        const body = `--${boundary}\r\n` +
+            `Content-Disposition: form-data; name="path"\r\n\r\n` +
+            `${path}\r\n` +
+            `--${boundary}--\r\n`;
+
+        return encoder.encode(body).buffer;
+    }
+
+    /**
      * Generate a unique boundary for multipart form data
      */
     private generateBoundary(): string {
