@@ -26,6 +26,22 @@ export class CrossPointUploader implements Uploader {
     }
 
     /**
+     * Check if CrossPoint device is reachable
+     */
+    async isConnected(): Promise<boolean> {
+        try {
+            const response = await requestUrl({
+                url: `${this.listEndpoint}?path=/`,
+                method: 'GET',
+                throw: false
+            });
+            return response.status >= 200 && response.status < 300;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
      * Upload EPUB to CrossPoint device
      */
     async uploadEpub(epubData: ArrayBuffer, filename: string, targetFolder: string): Promise<UploadResult> {

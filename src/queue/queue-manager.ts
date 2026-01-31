@@ -181,6 +181,14 @@ export class QueueManager {
     }
 
     /**
+     * Check if the device is connected
+     */
+    async isDeviceConnected(settings: SendToX4Settings): Promise<boolean> {
+        const uploader = this.getUploader(settings);
+        return uploader.isConnected();
+    }
+
+    /**
      * Get the appropriate uploader based on settings
      */
     private getUploader(settings: SendToX4Settings): Uploader {
