@@ -1,107 +1,107 @@
 # Send to X4
 
-ObsidianのMarkdownノートをEPUB形式に変換し、Xtenik X4電子インク端末へWiFi経由で送信するプラグインです。
+An Obsidian plugin that converts Markdown notes to EPUB format and sends them to Xtenik X4 e-ink devices via WiFi.
 
-## 機能
+## Features
 
-- **MarkdownからEPUBへの自動変換** - Obsidianノートを電子書籍形式に変換
-- **WiFi経由でのアップロード** - X4デバイスへネットワーク経由で直接送信
-- **ウォッチフォルダ** - 指定フォルダのファイルを自動検出して送信
-- **自動アップロード** - デバイス接続時にキュー内容を自動送信
-- **EPUB手動ダウンロード** - アップロードせずにEPUBファイルをダウンロード可能
-- **複数ファームウェア対応** - 標準X4ファームウェアとCrossPointカスタムファームウェアの両方に対応
+- **Markdown to EPUB Conversion** - Automatically convert Obsidian notes to e-book format
+- **WiFi Upload** - Send directly to X4 devices over the network
+- **Watch Folder** - Automatically detect and send files from a designated folder
+- **Auto Upload** - Automatically upload queued items when device is connected
+- **Manual EPUB Download** - Download EPUB files without uploading to device
+- **Multiple Firmware Support** - Compatible with both standard X4 firmware and CrossPoint custom firmware
 
-## インストール
+## Installation
 
-1. Obsidianの設定 → コミュニティプラグイン → 閲覧を開く
-2. 「Send to X4」を検索してインストール
-3. プラグインを有効化
+1. Open Obsidian Settings > Community Plugins > Browse
+2. Search for "Send to X4" and install
+3. Enable the plugin
 
-### 手動インストール
+### Manual Installation
 
-1. このリポジトリから最新リリースをダウンロード
-2. `main.js`、`manifest.json`、`styles.css`をObsidianのプラグインフォルダ（`.obsidian/plugins/obsidian-send-to-x4/`）にコピー
-3. Obsidianを再起動し、プラグインを有効化
+1. Download the latest release from this repository
+2. Copy `main.js`, `manifest.json`, and `styles.css` to your Obsidian plugins folder (`.obsidian/plugins/obsidian-send-to-x4/`)
+3. Restart Obsidian and enable the plugin
 
-## 使い方
+## Usage
 
-### 手動送信
+### Manual Send
 
-1. 送信したいノートを開く
-2. 以下のいずれかの方法で送信:
-   - コマンドパレットから「Send current note to X4」を実行
-   - ファイルメニューから「Send to X4」を選択
-   - 右クリックメニューから「Send to X4」を選択
-   - サイドバーのリボンアイコンをクリック
+1. Open the note you want to send
+2. Send using any of these methods:
+   - Run "Send current note to X4" from the command palette
+   - Select "Send to X4" from the file menu
+   - Select "Send to X4" from the right-click context menu
+   - Click the ribbon icon in the sidebar
 
-### ウォッチフォルダを使用
+### Using Watch Folder
 
-1. Vault内に`obsidian-to-x4`フォルダを作成（または設定でカスタム名を指定）
-2. 送信したいMarkdownファイルをそのフォルダに配置
-3. デバイスがWiFi接続されていれば自動で送信
-4. 送信完了後、ファイルは「Sent」サブフォルダに移動
+1. Create an `obsidian-to-x4` folder in your vault (or specify a custom name in settings)
+2. Place Markdown files you want to send in that folder
+3. Files will be automatically sent when the device is connected via WiFi
+4. After successful upload, files are moved to a "Sent" subfolder
 
-### EPUBダウンロード
+### EPUB Download
 
-X4にアップロードせずにEPUBファイルをダウンロードしたい場合:
-1. ノートを開く
-2. コマンドパレットから「Download current note as EPUB」を実行
+To download an EPUB file without uploading to X4:
+1. Open the note
+2. Run "Download current note as EPUB" from the command palette
 
-## メタデータ
+## Metadata
 
-YAML frontmatterでメタデータを指定できます:
+You can specify metadata using YAML frontmatter:
 
 ```yaml
 ---
-title: "記事のタイトル"
+title: "Article Title"
 author: "@username"
 date: 2025-01-31
 ---
 ```
 
-これらのメタデータはEPUBのファイル名と内部メタデータに使用されます。
+This metadata is used for the EPUB filename and internal metadata.
 
-## 設定
+## Settings
 
-| 項目 | 説明 | デフォルト値 |
-|-----|------|------------|
-| Use CrossPoint Firmware | CrossPointファームウェアを使用 | OFF |
-| Target Folder | X4上のアップロード先フォルダ | `obsidian-to-x4` |
-| Enable Watch Folder | ウォッチフォルダ機能の有効化 | ON |
-| Watch Folder Path | 監視対象フォルダパス | `obsidian-to-x4` |
-| X4 IP Address | 標準X4ファームウェアのIPアドレス | `192.168.3.3` |
-| CrossPoint IP Address | CrossPointファームウェアのIPアドレス | `192.168.4.1` |
+| Setting | Description | Default |
+|---------|-------------|---------|
+| Use CrossPoint Firmware | Use CrossPoint firmware instead of standard | OFF |
+| Target Folder | Upload destination folder on X4 | `obsidian-to-x4` |
+| Enable Watch Folder | Enable watch folder feature | ON |
+| Watch Folder Path | Path to watch folder in vault | `obsidian-to-x4` |
+| X4 IP Address | IP address for standard X4 firmware | `192.168.3.3` |
+| CrossPoint IP Address | IP address for CrossPoint firmware | `192.168.4.1` |
 
-## 対応デバイス
+## Supported Devices
 
-- Xtenik X4（標準ファームウェア）
-- CrossPointカスタムファームウェア搭載デバイス
+- Xtenik X4 (standard firmware)
+- Devices with CrossPoint custom firmware
 
-## 技術仕様
+## Technical Specifications
 
-- **EPUB形式**: EPUB 2.0
-- **対応Obsidianバージョン**: 0.15.0以上
-- **ネットワーク**: WiFi経由（HTTP）
+- **EPUB Format**: EPUB 2.0
+- **Minimum Obsidian Version**: 0.15.0
+- **Network**: WiFi (HTTP)
 
-## 開発
+## Development
 
-### ビルド
+### Build
 
 ```bash
 npm install
 npm run build
 ```
 
-### 開発モード
+### Development Mode
 
 ```bash
 npm run dev
 ```
 
-## ライセンス
+## License
 
 MIT License
 
-## 貢献
+## Contributing
 
-バグ報告や機能リクエストは[Issues](https://github.com/kataring/obsidian-send-to-x4/issues)へお願いします。
+Bug reports and feature requests are welcome on [Issues](https://github.com/kataring/obsidian-send-to-x4/issues).
