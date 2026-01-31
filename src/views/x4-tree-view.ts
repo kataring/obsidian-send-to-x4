@@ -80,7 +80,8 @@ export class X4TreeView extends ItemView {
         selectBtn.addEventListener('click', () => this.toggleSelectionMode());
 
         // Delete selected button (hidden by default)
-        const deleteBtn = headerButtons.createDiv({ cls: 'x4-tree-btn x4-tree-delete-btn clickable-icon', attr: { style: 'display: none;' } });
+        const deleteBtn = headerButtons.createDiv({ cls: 'x4-tree-btn x4-tree-delete-btn clickable-icon' });
+        deleteBtn.style.display = 'none';
         setIcon(deleteBtn, 'trash-2');
         deleteBtn.setAttribute('aria-label', 'Delete Selected');
         deleteBtn.addEventListener('click', () => this.deleteSelected());
@@ -725,6 +726,39 @@ export class X4TreeView extends ItemView {
             </div>
         `;
 
+        // Add styles for confirm dialog (reuse from confirmAndDelete)
+        const style = document.createElement('style');
+        style.textContent = `
+            .x4-delete-confirm {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+            }
+            .x4-delete-confirm-content {
+                background: var(--background-primary);
+                padding: 20px;
+                border-radius: 8px;
+                max-width: 400px;
+            }
+            .x4-delete-warning {
+                color: var(--text-error);
+                font-size: 13px;
+            }
+            .x4-delete-buttons {
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+                margin-top: 16px;
+            }
+        `;
+        document.head.appendChild(style);
         document.body.appendChild(confirmEl);
 
         return new Promise<void>((resolve) => {
@@ -733,6 +767,7 @@ export class X4TreeView extends ItemView {
 
             const cleanup = () => {
                 confirmEl.remove();
+                style.remove();
                 resolve();
             };
 
