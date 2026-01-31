@@ -56,14 +56,14 @@ function getVaultPath() {
         return process.env.OBSIDIAN_VAULT;
     }
 
-    console.error('Error: No vault path specified.');
-    console.error('');
-    console.error('Usage:');
-    console.error('  npm run install-plugin -- "/path/to/vault"');
-    console.error('  OBSIDIAN_VAULT=/path/to/vault npm run install-plugin');
-    console.error('');
-    console.error('Or create a .env file with:');
-    console.error('  OBSIDIAN_VAULT="/Users/kataring/Documents/Obsidian Vault"');
+    console.log('Error: No vault path specified.');
+    console.log('');
+    console.log('Usage:');
+    console.log('  npm run install-plugin -- "/path/to/vault"');
+    console.log('  OBSIDIAN_VAULT=/path/to/vault npm run install-plugin');
+    console.log('');
+    console.log('Or create a .env file with:');
+    console.log('  OBSIDIAN_VAULT="/Users/kataring/Documents/Obsidian Vault"');
     process.exit(1);
 }
 
@@ -74,14 +74,14 @@ function main() {
 
     // Verify vault exists
     if (!existsSync(vaultPath)) {
-        console.error(`Error: Vault path does not exist: ${vaultPath}`);
+        console.log(`Error: Vault path does not exist: ${vaultPath}`);
         process.exit(1);
     }
 
     // Verify .obsidian folder exists
     const obsidianDir = join(vaultPath, '.obsidian');
     if (!existsSync(obsidianDir)) {
-        console.error(`Error: Not a valid Obsidian vault (no .obsidian folder): ${vaultPath}`);
+        console.log(`Error: Not a valid Obsidian vault (no .obsidian folder): ${vaultPath}`);
         process.exit(1);
     }
 
@@ -111,7 +111,7 @@ function main() {
     }
 
     if (copied === 0) {
-        console.error('Error: No files to copy. Did you run "npm run build" first?');
+        console.log('Error: No files to copy. Did you run "npm run build" first?');
         process.exit(1);
     }
 
