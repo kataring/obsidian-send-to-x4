@@ -99,20 +99,40 @@ export class CrossPointUploader implements Uploader {
     }
 
     /**
-     * Check if folder exists and create if not
+     * Check if folder exists and create if not (supports nested folders)
      */
-    private async ensureFolderExists(folderName: string): Promise<boolean> {
+    private async ensureFolderExists(folderPath: string): Promise<boolean> {
         try {
-            console.log('[CrossPoint Upload] Checking if folder exists:', folderName);
-            const exists = await this.folderExists(folderName);
+            console.log('[CrossPoint Upload] Checking if folder exists:', folderPath);
 
-            if (exists) {
-                console.log('[CrossPoint Upload] Folder already exists');
-                return true;
+            // Normalize path: remove leading/trailing slashes and split into segments
+            const normalizedPath = folderPath.replace(/^\/+|\/+$/g, '');
+            if (!normalizedPath) {
+                return true; // Root folder always exists
             }
 
-            console.log('[CrossPoint Upload] Creating folder:', folderName);
-            return await this.createFolder(folderName, '/');
+            const segments = normalizedPath.split('/').filter(s => s.length > 0);
+            console.log('[CrossPoint Upload] Folder segments:', segments);
+
+            // Create each folder level if it doesn't exist
+            let currentPath = '/';
+            for (const segment of segments) {
+                const exists = await this.folderExistsAt(segment, currentPath);
+
+                if (!exists) {
+                    console.log('[CrossPoint Upload] Creating folder:', segment, 'at', currentPath);
+                    const created = await this.createFolder(segment, currentPath);
+                    if (!created) {
+                        console.error('[CrossPoint Upload] Failed to create folder:', segment);
+                        return false;
+                    }
+                }
+
+                currentPath = currentPath === '/' ? `/${segment}` : `${currentPath}/${segment}`;
+            }
+
+            console.log('[CrossPoint Upload] All folders ready');
+            return true;
 
         } catch (error) {
             console.error('[CrossPoint Upload] Error checking/creating folder:', error);
@@ -121,17 +141,17 @@ export class CrossPointUploader implements Uploader {
     }
 
     /**
-     * Check if folder exists using GET /api/files endpoint
+     * Check if folder exists at a specific parent path using GET /api/files endpoint
      */
-    private async folderExists(folderName: string): Promise<boolean> {
+    private async folderExistsAt(folderName: string, parentPath: string): Promise<boolean> {
         try {
             const response = await requestUrl({
-                url: `${this.listEndpoint}?path=/`,
+                url: `${this.listEndpoint}?path=${encodeURIComponent(parentPath)}`,
                 method: 'GET'
             });
 
             const items = response.json as Array<{ isDirectory: boolean; name: string }>;
-            console.log('[CrossPoint Upload] Root directory contents:', items);
+            console.log('[CrossPoint Upload] Directory contents at', parentPath, ':', items);
 
             const folder = items.find(item =>
                 item.isDirectory && item.name === folderName
