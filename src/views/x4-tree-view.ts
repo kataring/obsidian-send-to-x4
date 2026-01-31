@@ -22,7 +22,6 @@ interface TreeNode {
 export type UploadToFolderCallback = (targetFolder: string) => void;
 
 export class X4TreeView extends ItemView {
-    private settings: SendToX4Settings;
     private rootEl: HTMLElement | null = null;
     private treeData: TreeNode[] = [];
     private isConnected = false;
@@ -35,7 +34,10 @@ export class X4TreeView extends ItemView {
     constructor(leaf: WorkspaceLeaf, getSettings: () => SendToX4Settings) {
         super(leaf);
         this.getSettings = getSettings;
-        this.settings = getSettings();
+    }
+
+    private get settings(): SendToX4Settings {
+        return this.getSettings();
     }
 
     setUploadCallback(callback: UploadToFolderCallback) {
@@ -102,8 +104,12 @@ export class X4TreeView extends ItemView {
         // Add styles
         this.addStyles();
 
-        // Initial load
-        await this.refresh();
+        // Initial load (don't block view opening on network errors)
+        try {
+            await this.refresh();
+        } catch (error) {
+            console.error('[X4TreeView] Initial refresh failed:', error);
+        }
     }
 
     async onClose() {
@@ -295,8 +301,6 @@ export class X4TreeView extends ItemView {
     }
 
     async refresh() {
-        this.settings = this.getSettings();
-
         if (!this.rootEl) return;
 
         this.isLoading = true;
