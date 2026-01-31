@@ -16,22 +16,39 @@ export default class SendToX4Plugin extends Plugin {
     private statusBarItem: HTMLElement | null = null;
 
     async onload() {
-        await this.loadSettings();
+        console.log('[Send to X4] onload started');
+
+        try {
+            await this.loadSettings();
+            console.log('[Send to X4] Settings loaded');
+        } catch (e) {
+            console.error('[Send to X4] Failed to load settings:', e);
+        }
 
         // Initialize queue manager
         this.queueManager = new QueueManager(this.app);
 
         // Load saved queue
-        const savedData = await this.loadData();
-        if (savedData?.queue) {
-            this.queueManager.loadQueue(savedData.queue);
+        try {
+            const savedData = await this.loadData();
+            if (savedData?.queue) {
+                this.queueManager.loadQueue(savedData.queue);
+            }
+            console.log('[Send to X4] Queue loaded');
+        } catch (e) {
+            console.error('[Send to X4] Failed to load queue:', e);
         }
 
         // Register X4 Tree View
+        console.log('[Send to X4] Registering view...');
         this.registerView(
             X4_TREE_VIEW_TYPE,
-            (leaf) => new X4TreeView(leaf, () => this.settings)
+            (leaf) => {
+                console.log('[Send to X4] Creating X4TreeView instance');
+                return new X4TreeView(leaf, () => this.settings);
+            }
         );
+        console.log('[Send to X4] View registered');
 
         // Add settings tab
         this.addSettingTab(new SendToX4SettingTab(this.app, this));

@@ -33,7 +33,9 @@ export class X4TreeView extends ItemView {
 
     constructor(leaf: WorkspaceLeaf, getSettings: () => SendToX4Settings) {
         super(leaf);
+        console.log('[X4TreeView] Constructor called');
         this.getSettings = getSettings;
+        console.log('[X4TreeView] Constructor completed');
     }
 
     private get settings(): SendToX4Settings {
@@ -57,6 +59,7 @@ export class X4TreeView extends ItemView {
     }
 
     async onOpen() {
+        console.log('[X4TreeView] onOpen called');
         const container = this.containerEl.children[1];
         container.empty();
         container.addClass('x4-tree-view');
