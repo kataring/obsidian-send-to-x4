@@ -79,7 +79,7 @@ export class QueueManager {
      * Upload a single file to X4
      */
     async uploadFile(file: TFile, settings: SendToX4Settings): Promise<boolean> {
-        return this.uploadFileToFolder(file, settings, settings.targetFolder);
+        return this.uploadFileToFolder(file, settings, 'obsidian-to-x4');
     }
 
     /**

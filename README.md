@@ -57,7 +57,6 @@ This metadata is used for the EPUB filename and internal metadata.
 | Setting | Description | Default |
 |---------|-------------|---------|
 | Use CrossPoint Firmware | Use CrossPoint firmware instead of standard | OFF |
-| Target Folder | Upload destination folder on X4 | `obsidian-to-x4` |
 | X4 IP Address | IP address for standard X4 firmware | `192.168.3.3` |
 | CrossPoint IP Address | IP address for CrossPoint firmware | `192.168.4.1` |
 

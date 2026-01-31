@@ -4,14 +4,12 @@
 
 export interface SendToX4Settings {
     useCrosspointFirmware: boolean;
-    targetFolder: string;
     x4Ip: string;
     crosspointIp: string;
 }
 
 export const DEFAULT_SETTINGS: SendToX4Settings = {
     useCrosspointFirmware: false,
-    targetFolder: 'obsidian-to-x4',
     x4Ip: '192.168.3.3',
     crosspointIp: '192.168.4.1',
 };
