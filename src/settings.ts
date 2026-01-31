@@ -41,31 +41,6 @@ export class SendToX4SettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        containerEl.createEl('h3', { text: 'Watch Folder' });
-
-        new Setting(containerEl)
-            .setName('Enable Watch Folder')
-            .setDesc('Automatically add files to queue when placed in the watch folder')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.watchFolderEnabled)
-                .onChange(async (value) => {
-                    this.plugin.settings.watchFolderEnabled = value;
-                    await this.plugin.saveSettings();
-                    this.plugin.setupWatchFolder();
-                }));
-
-        new Setting(containerEl)
-            .setName('Watch Folder Path')
-            .setDesc('Files in this folder will be automatically added to the queue. Uploaded files are moved to "Sent" subfolder.')
-            .addText(text => text
-                .setPlaceholder('obsidian-to-x4')
-                .setValue(this.plugin.settings.watchFolder)
-                .onChange(async (value) => {
-                    this.plugin.settings.watchFolder = value || 'obsidian-to-x4';
-                    await this.plugin.saveSettings();
-                    this.plugin.setupWatchFolder();
-                }));
-
         containerEl.createEl('h3', { text: 'Network Settings' });
 
         new Setting(containerEl)

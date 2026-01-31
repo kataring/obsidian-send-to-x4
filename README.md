@@ -6,8 +6,6 @@ An Obsidian plugin that converts Markdown notes to EPUB format and sends them to
 
 - **Markdown to EPUB Conversion** - Automatically convert Obsidian notes to e-book format
 - **WiFi Upload** - Send directly to X4 devices over the network
-- **Watch Folder** - Automatically detect and send files from a designated folder
-- **Auto Upload** - Automatically upload queued items when device is connected
 - **Manual EPUB Download** - Download EPUB files without uploading to device
 - **Multiple Firmware Support** - Compatible with both standard X4 firmware and CrossPoint custom firmware
 
@@ -33,13 +31,6 @@ An Obsidian plugin that converts Markdown notes to EPUB format and sends them to
    - Select "Send to X4" from the file menu
    - Select "Send to X4" from the right-click context menu
    - Click the ribbon icon in the sidebar
-
-### Using Watch Folder
-
-1. Create an `obsidian-to-x4` folder in your vault (or specify a custom name in settings)
-2. Place Markdown files you want to send in that folder
-3. Files will be automatically sent when the device is connected via WiFi
-4. After successful upload, files are moved to a "Sent" subfolder
 
 ### EPUB Download
 
@@ -67,8 +58,6 @@ This metadata is used for the EPUB filename and internal metadata.
 |---------|-------------|---------|
 | Use CrossPoint Firmware | Use CrossPoint firmware instead of standard | OFF |
 | Target Folder | Upload destination folder on X4 | `obsidian-to-x4` |
-| Enable Watch Folder | Enable watch folder feature | ON |
-| Watch Folder Path | Path to watch folder in vault | `obsidian-to-x4` |
 | X4 IP Address | IP address for standard X4 firmware | `192.168.3.3` |
 | CrossPoint IP Address | IP address for CrossPoint firmware | `192.168.4.1` |
 
