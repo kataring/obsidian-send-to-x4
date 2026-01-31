@@ -4,16 +4,47 @@
  *
  * Usage:
  *   npm run install-plugin -- /path/to/vault
- *   npm run install-plugin              # Uses OBSIDIAN_VAULT env var
+ *   npm run install-plugin              # Uses OBSIDIAN_VAULT from .env or env var
  */
 
-import { existsSync, mkdirSync, copyFileSync } from 'fs';
+import { existsSync, mkdirSync, copyFileSync, readFileSync } from 'fs';
 import { join, resolve } from 'path';
 
 const PLUGIN_ID = 'send-to-x4';
 const FILES_TO_COPY = ['main.js', 'manifest.json', 'styles.css'];
 
+/**
+ * Load .env file if it exists
+ */
+function loadEnvFile() {
+    const envPath = join(process.cwd(), '.env');
+    if (existsSync(envPath)) {
+        const content = readFileSync(envPath, 'utf-8');
+        for (const line of content.split('\n')) {
+            const trimmed = line.trim();
+            if (trimmed && !trimmed.startsWith('#')) {
+                const match = trimmed.match(/^([^=]+)=(.*)$/);
+                if (match) {
+                    const key = match[1].trim();
+                    let value = match[2].trim();
+                    // Remove quotes if present
+                    if ((value.startsWith('"') && value.endsWith('"')) ||
+                        (value.startsWith("'") && value.endsWith("'"))) {
+                        value = value.slice(1, -1);
+                    }
+                    if (!process.env[key]) {
+                        process.env[key] = value;
+                    }
+                }
+            }
+        }
+    }
+}
+
 function getVaultPath() {
+    // Load .env file first
+    loadEnvFile();
+
     // Check command line argument
     const args = process.argv.slice(2);
     if (args.length > 0) {
@@ -28,11 +59,11 @@ function getVaultPath() {
     console.error('Error: No vault path specified.');
     console.error('');
     console.error('Usage:');
-    console.error('  npm run install-plugin -- /path/to/vault');
+    console.error('  npm run install-plugin -- "/path/to/vault"');
     console.error('  OBSIDIAN_VAULT=/path/to/vault npm run install-plugin');
     console.error('');
-    console.error('You can also create a .env file with:');
-    console.error('  OBSIDIAN_VAULT=/path/to/your/vault');
+    console.error('Or create a .env file with:');
+    console.error('  OBSIDIAN_VAULT="/Users/kataring/Documents/Obsidian Vault"');
     process.exit(1);
 }
 
