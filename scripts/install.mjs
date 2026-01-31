@@ -63,7 +63,7 @@ function getVaultPath() {
     console.log('  OBSIDIAN_VAULT=/path/to/vault npm run install-plugin');
     console.log('');
     console.log('Or create a .env file with:');
-    console.log('  OBSIDIAN_VAULT="/Users/kataring/Documents/Obsidian Vault"');
+    console.log('  OBSIDIAN_VAULT="/path/to/your/vault"');
     process.exit(1);
 }
 
