@@ -486,12 +486,40 @@ export class X4TreeView extends ItemView {
         const textData = e.dataTransfer?.getData('text/plain');
         if (textData) {
             // Split by newlines in case of multiple files
-            const paths = textData.split('\n').filter(p => p.trim());
+            const lines = textData.split('\n').filter(p => p.trim());
 
-            for (const path of paths) {
-                const file = this.app.vault.getAbstractFileByPath(path);
-                if (file instanceof TFile) {
-                    files.push(file);
+            for (const line of lines) {
+                let filePath: string | null = null;
+
+                // Check if it's an Obsidian URI (obsidian://open?vault=...&file=...)
+                if (line.startsWith('obsidian://')) {
+                    try {
+                        const url = new URL(line);
+                        const fileParam = url.searchParams.get('file');
+                        if (fileParam) {
+                            filePath = decodeURIComponent(fileParam);
+                        }
+                    } catch (err) {
+                        console.log('[X4TreeView] Failed to parse Obsidian URI:', line);
+                    }
+                } else {
+                    // Assume it's a direct file path
+                    filePath = line;
+                }
+
+                if (filePath) {
+                    // Try with and without .md extension
+                    let file = this.app.vault.getAbstractFileByPath(filePath);
+                    if (!file && !filePath.endsWith('.md')) {
+                        file = this.app.vault.getAbstractFileByPath(filePath + '.md');
+                    }
+
+                    if (file instanceof TFile) {
+                        files.push(file);
+                        console.log('[X4TreeView] Found Obsidian file:', file.path);
+                    } else {
+                        console.log('[X4TreeView] File not found:', filePath);
+                    }
                 }
             }
         }
