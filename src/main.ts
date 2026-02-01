@@ -7,7 +7,9 @@ import { Plugin, TFile, Notice } from 'obsidian';
 import { SendToX4Settings, DEFAULT_SETTINGS } from './types';
 import { SendToX4SettingTab } from './settings';
 import { QueueManager } from './queue/queue-manager';
-import { X4TreeView, X4_TREE_VIEW_TYPE } from './views/x4-tree-view';
+import { X4TreeView, X4_TREE_VIEW_TYPE, UploadFilesCallback, UploadObsidianFilesCallback } from './views/x4-tree-view';
+import { X4Uploader } from './upload/x4-uploader';
+import { CrossPointUploader } from './upload/crosspoint-uploader';
 import { FilePickerModal } from './views/file-picker-modal';
 
 export default class SendToX4Plugin extends Plugin {
@@ -47,7 +49,9 @@ export default class SendToX4Plugin extends Plugin {
                 return new X4TreeView(
                     leaf,
                     () => this.settings,
-                    () => (targetFolder: string) => this.showFilePicker(targetFolder)
+                    () => (targetFolder: string) => this.showFilePicker(targetFolder),
+                    () => (files: File[], targetFolder: string) => this.uploadDroppedFiles(files, targetFolder),
+                    () => (files: TFile[], targetFolder: string) => this.uploadObsidianFiles(files, targetFolder)
                 );
             }
         );
@@ -176,6 +180,107 @@ export default class SendToX4Plugin extends Plugin {
             await this.uploadFilesToFolder(files, targetFolder);
         });
         modal.open();
+    }
+
+    /**
+     * Upload Obsidian files (from drag and drop within Obsidian) to the specified folder on X4
+     * Markdown files are converted to EPUB, other files are uploaded as-is
+     */
+    private async uploadObsidianFiles(files: TFile[], targetFolder: string): Promise<void> {
+        if (files.length === 0) return;
+
+        console.log(`[Send to X4] uploadObsidianFiles: ${files.length} files to ${targetFolder}`);
+        const notice = new Notice(`Uploading ${files.length} files to ${targetFolder}...`, 0);
+        let successCount = 0;
+        let failCount = 0;
+
+        const uploader = this.settings.useCrosspointFirmware
+            ? new CrossPointUploader(this.settings.crosspointIp)
+            : new X4Uploader(this.settings.x4Ip);
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            try {
+                console.log(`[Send to X4] Uploading file ${i + 1}/${files.length}: ${file.name}`);
+                notice.setMessage(`Uploading ${i + 1}/${files.length}: ${file.name}...`);
+
+                let success = false;
+
+                if (file.extension === 'md') {
+                    // Convert markdown to EPUB and upload
+                    success = await this.queueManager.uploadFileToFolder(file, this.settings, targetFolder);
+                } else {
+                    // Upload as raw file
+                    const arrayBuffer = await this.app.vault.readBinary(file);
+                    success = await uploader.uploadRawFile(arrayBuffer, file.name, targetFolder);
+                }
+
+                console.log(`[Send to X4] Upload result for ${file.name}: ${success}`);
+                if (success) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+
+                // Add delay between uploads for device stability
+                if (i < files.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            } catch (error) {
+                console.error(`[Send to X4] Failed to upload ${file.name}:`, error);
+                failCount++;
+            }
+        }
+
+        notice.hide();
+        console.log(`[Send to X4] Upload complete: ${successCount} succeeded, ${failCount} failed`);
+        new Notice(`Upload complete: ${successCount} succeeded, ${failCount} failed`);
+    }
+
+    /**
+     * Upload dropped files (from drag and drop) to the specified folder on X4
+     */
+    private async uploadDroppedFiles(files: File[], targetFolder: string): Promise<void> {
+        if (files.length === 0) return;
+
+        console.log(`[Send to X4] uploadDroppedFiles: ${files.length} files to ${targetFolder}`);
+        const notice = new Notice(`Uploading ${files.length} files to ${targetFolder}...`, 0);
+        let successCount = 0;
+        let failCount = 0;
+
+        const uploader = this.settings.useCrosspointFirmware
+            ? new CrossPointUploader(this.settings.crosspointIp)
+            : new X4Uploader(this.settings.x4Ip);
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            try {
+                console.log(`[Send to X4] Uploading file ${i + 1}/${files.length}: ${file.name}`);
+                notice.setMessage(`Uploading ${i + 1}/${files.length}: ${file.name}...`);
+
+                const arrayBuffer = await file.arrayBuffer();
+                const success = await uploader.uploadRawFile(arrayBuffer, file.name, targetFolder);
+
+                console.log(`[Send to X4] Upload result for ${file.name}: ${success}`);
+                if (success) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+
+                // Add delay between uploads for device stability
+                if (i < files.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            } catch (error) {
+                console.error(`[Send to X4] Failed to upload ${file.name}:`, error);
+                failCount++;
+            }
+        }
+
+        notice.hide();
+        console.log(`[Send to X4] Upload complete: ${successCount} succeeded, ${failCount} failed`);
+        new Notice(`Upload complete: ${successCount} succeeded, ${failCount} failed`);
     }
 
     /**
