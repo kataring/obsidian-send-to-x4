@@ -76,13 +76,6 @@ export class QueueManager {
     }
 
     /**
-     * Upload a single file to X4
-     */
-    async uploadFile(file: TFile, settings: SendToX4Settings): Promise<boolean> {
-        return this.uploadFileToFolder(file, settings, settings.targetFolder);
-    }
-
-    /**
      * Upload a single file to a specific folder on X4
      */
     async uploadFileToFolder(file: TFile, settings: SendToX4Settings, targetFolder: string): Promise<boolean> {
@@ -116,49 +109,6 @@ export class QueueManager {
             console.error('[QueueManager] Upload error:', error);
             throw error;
         }
-    }
-
-    /**
-     * Upload all pending items in the queue
-     */
-    async uploadQueue(settings: SendToX4Settings, onProgress?: (current: number, total: number) => void): Promise<{ success: number; failed: number }> {
-        const pendingItems = this.queue.filter(item => item.status === 'pending');
-        let success = 0;
-        let failed = 0;
-
-        for (let i = 0; i < pendingItems.length; i++) {
-            const item = pendingItems[i];
-
-            if (onProgress) {
-                onProgress(i + 1, pendingItems.length);
-            }
-
-            item.status = 'uploading';
-
-            try {
-                const file = this.app.vault.getAbstractFileByPath(item.filePath);
-                if (!(file instanceof TFile)) {
-                    throw new Error('File not found');
-                }
-
-                const uploaded = await this.uploadFile(file, settings);
-
-                if (uploaded) {
-                    item.status = 'done';
-                    success++;
-                } else {
-                    item.status = 'failed';
-                    item.error = 'Upload failed';
-                    failed++;
-                }
-            } catch (error) {
-                item.status = 'failed';
-                item.error = (error as Error).message;
-                failed++;
-            }
-        }
-
-        return { success, failed };
     }
 
     /**
