@@ -2,7 +2,7 @@
  * X4 Tree View - Shows X4 device file structure in a sidebar
  */
 
-import { ItemView, WorkspaceLeaf, setIcon, Menu, Notice, App } from 'obsidian';
+import { ItemView, WorkspaceLeaf, setIcon, Menu, Notice, App, TFile } from 'obsidian';
 import { FileItem, SendToX4Settings } from '../types';
 import { Uploader } from '../upload/uploader-interface';
 import { X4Uploader } from '../upload/x4-uploader';
@@ -24,6 +24,8 @@ export type UploadToFolderCallback = (targetFolder: string) => void;
 
 export type UploadFilesCallback = (files: File[], targetFolder: string) => Promise<void>;
 
+export type UploadObsidianFilesCallback = (files: TFile[], targetFolder: string) => Promise<void>;
+
 export class X4TreeView extends ItemView {
     private rootEl: HTMLElement | null = null;
     private treeData: TreeNode[] = [];
@@ -32,6 +34,7 @@ export class X4TreeView extends ItemView {
     private getSettings: () => SendToX4Settings;
     private getUploadCallback: () => UploadToFolderCallback;
     private getUploadFilesCallback: () => UploadFilesCallback;
+    private getUploadObsidianFilesCallback: () => UploadObsidianFilesCallback;
     private selectionMode = false;
     private selectedItems: Set<string> = new Set();
     private draggedNode: TreeNode | null = null;
@@ -40,13 +43,15 @@ export class X4TreeView extends ItemView {
         leaf: WorkspaceLeaf,
         getSettings: () => SendToX4Settings,
         getUploadCallback: () => UploadToFolderCallback,
-        getUploadFilesCallback?: () => UploadFilesCallback
+        getUploadFilesCallback?: () => UploadFilesCallback,
+        getUploadObsidianFilesCallback?: () => UploadObsidianFilesCallback
     ) {
         super(leaf);
         console.log('[X4TreeView] Constructor called');
         this.getSettings = getSettings;
         this.getUploadCallback = getUploadCallback;
         this.getUploadFilesCallback = getUploadFilesCallback || (() => async () => {});
+        this.getUploadObsidianFilesCallback = getUploadObsidianFilesCallback || (() => async () => {});
         console.log('[X4TreeView] Constructor completed');
     }
 
@@ -60,6 +65,10 @@ export class X4TreeView extends ItemView {
 
     private get uploadFilesCallback(): UploadFilesCallback {
         return this.getUploadFilesCallback();
+    }
+
+    private get uploadObsidianFilesCallback(): UploadObsidianFilesCallback {
+        return this.getUploadObsidianFilesCallback();
     }
 
     getViewType(): string {
@@ -447,11 +456,8 @@ export class X4TreeView extends ItemView {
                 return;
             }
 
-            // Handle external file drop
-            const files = this.getDroppedFiles(e);
-            if (files.length > 0) {
-                await this.handleFileDrop(files, '/');
-            }
+            // Handle drop
+            await this.handleDrop(e, '/');
         });
     }
 
@@ -467,19 +473,48 @@ export class X4TreeView extends ItemView {
         return files;
     }
 
-    private async handleFileDrop(files: File[], targetFolder: string) {
+    private getObsidianFiles(e: DragEvent): TFile[] {
+        const files: TFile[] = [];
+
+        // Try to get Obsidian file paths from text/plain
+        const textData = e.dataTransfer?.getData('text/plain');
+        if (textData) {
+            // Split by newlines in case of multiple files
+            const paths = textData.split('\n').filter(p => p.trim());
+
+            for (const path of paths) {
+                const file = this.app.vault.getAbstractFileByPath(path);
+                if (file instanceof TFile) {
+                    files.push(file);
+                }
+            }
+        }
+
+        return files;
+    }
+
+    private async handleDrop(e: DragEvent, targetFolder: string) {
         if (!this.isConnected) {
             new Notice('Not connected to device');
             return;
         }
 
-        console.log('[X4TreeView] Dropping', files.length, 'files to', targetFolder);
+        // First, check for Obsidian internal files
+        const obsidianFiles = this.getObsidianFiles(e);
+        if (obsidianFiles.length > 0) {
+            console.log('[X4TreeView] Dropping', obsidianFiles.length, 'Obsidian files to', targetFolder);
+            await this.uploadObsidianFilesCallback(obsidianFiles, targetFolder);
+            await this.refresh();
+            return;
+        }
 
-        // Call the upload files callback
-        await this.uploadFilesCallback(files, targetFolder);
-
-        // Refresh the tree after upload
-        await this.refresh();
+        // Then check for external files
+        const files = this.getDroppedFiles(e);
+        if (files.length > 0) {
+            console.log('[X4TreeView] Dropping', files.length, 'external files to', targetFolder);
+            await this.uploadFilesCallback(files, targetFolder);
+            await this.refresh();
+        }
     }
 
     private async moveNode(node: TreeNode, targetFolder: string) {
@@ -587,11 +622,8 @@ export class X4TreeView extends ItemView {
                     return;
                 }
 
-                // Handle external file drop
-                const files = this.getDroppedFiles(e);
-                if (files.length > 0) {
-                    await this.handleFileDrop(files, node.path);
-                }
+                // Handle file drop (Obsidian or external)
+                await this.handleDrop(e, node.path);
             });
         }
 
