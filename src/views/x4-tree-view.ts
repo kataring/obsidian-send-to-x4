@@ -445,6 +445,12 @@ export class X4TreeView extends ItemView {
             e.stopPropagation();
             container.removeClass('drag-over-root');
 
+            console.log('[X4TreeView] Drop event on root container');
+            console.log('[X4TreeView] draggedNode:', this.draggedNode);
+            console.log('[X4TreeView] dataTransfer types:', e.dataTransfer?.types);
+            console.log('[X4TreeView] dataTransfer files:', e.dataTransfer?.files?.length);
+            console.log('[X4TreeView] text/plain:', e.dataTransfer?.getData('text/plain'));
+
             // Handle internal drag (move within tree)
             if (this.draggedNode) {
                 // Moving to root - construct destination path
@@ -700,6 +706,12 @@ export class X4TreeView extends ItemView {
                 e.preventDefault();
                 e.stopPropagation();
                 itemEl.removeClass('drag-over');
+
+                console.log('[X4TreeView] Drop event on folder:', node.path);
+                console.log('[X4TreeView] draggedNode:', this.draggedNode);
+                console.log('[X4TreeView] dataTransfer types:', e.dataTransfer?.types);
+                console.log('[X4TreeView] dataTransfer files:', e.dataTransfer?.files?.length);
+                console.log('[X4TreeView] text/plain:', e.dataTransfer?.getData('text/plain'));
 
                 // Handle internal drag (move within tree)
                 if (this.draggedNode) {
