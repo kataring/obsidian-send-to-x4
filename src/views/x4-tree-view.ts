@@ -21,6 +21,8 @@ interface TreeNode {
 
 export type UploadToFolderCallback = (targetFolder: string) => void;
 
+export type UploadFilesCallback = (files: File[], targetFolder: string) => Promise<void>;
+
 export class X4TreeView extends ItemView {
     private rootEl: HTMLElement | null = null;
     private treeData: TreeNode[] = [];
@@ -28,18 +30,22 @@ export class X4TreeView extends ItemView {
     private isLoading = false;
     private getSettings: () => SendToX4Settings;
     private getUploadCallback: () => UploadToFolderCallback;
+    private getUploadFilesCallback: () => UploadFilesCallback;
     private selectionMode = false;
     private selectedItems: Set<string> = new Set();
+    private draggedNode: TreeNode | null = null;
 
     constructor(
         leaf: WorkspaceLeaf,
         getSettings: () => SendToX4Settings,
-        getUploadCallback: () => UploadToFolderCallback
+        getUploadCallback: () => UploadToFolderCallback,
+        getUploadFilesCallback?: () => UploadFilesCallback
     ) {
         super(leaf);
         console.log('[X4TreeView] Constructor called');
         this.getSettings = getSettings;
         this.getUploadCallback = getUploadCallback;
+        this.getUploadFilesCallback = getUploadFilesCallback || (() => async () => {});
         console.log('[X4TreeView] Constructor completed');
     }
 
@@ -49,6 +55,10 @@ export class X4TreeView extends ItemView {
 
     private get uploadCallback(): UploadToFolderCallback {
         return this.getUploadCallback();
+    }
+
+    private get uploadFilesCallback(): UploadFilesCallback {
+        return this.getUploadFilesCallback();
     }
 
     getViewType(): string {
@@ -108,6 +118,9 @@ export class X4TreeView extends ItemView {
 
         // Create tree container
         this.rootEl = container.createDiv({ cls: 'x4-tree-container' });
+
+        // Setup drop zone for root container
+        this.setupRootDropZone(this.rootEl);
 
         // Show initial message (don't connect automatically)
         const emptyEl = this.rootEl.createDiv({ cls: 'x4-tree-empty' });
@@ -249,6 +262,23 @@ export class X4TreeView extends ItemView {
             .x4-tree-item.selected {
                 background: var(--background-modifier-hover);
             }
+            .x4-tree-item.dragging {
+                opacity: 0.5;
+            }
+            .x4-tree-item.drag-over {
+                background: var(--interactive-accent);
+                color: var(--text-on-accent);
+            }
+            .x4-tree-container.drag-over-root {
+                background: var(--background-modifier-hover);
+                border: 2px dashed var(--interactive-accent);
+            }
+            .x4-tree-item[draggable="true"] {
+                cursor: grab;
+            }
+            .x4-tree-item[draggable="true"]:active {
+                cursor: grabbing;
+            }
             .x4-create-folder-dialog {
                 position: fixed;
                 top: 0;
@@ -380,8 +410,189 @@ export class X4TreeView extends ItemView {
         }
     }
 
+    private setupRootDropZone(container: HTMLElement) {
+        container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Only show drag-over effect if dropping on empty space
+            const target = e.target as HTMLElement;
+            if (target === container || target.classList.contains('x4-tree-empty')) {
+                container.addClass('drag-over-root');
+            }
+        });
+
+        container.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            const relatedTarget = e.relatedTarget as HTMLElement;
+            if (!container.contains(relatedTarget)) {
+                container.removeClass('drag-over-root');
+            }
+        });
+
+        container.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            container.removeClass('drag-over-root');
+
+            // Handle internal drag (move within tree)
+            if (this.draggedNode) {
+                // Moving to root - construct destination path
+                const destPath = '/' + this.draggedNode.name;
+                if (this.draggedNode.path !== destPath) {
+                    await this.moveNode(this.draggedNode, '/');
+                }
+                this.draggedNode = null;
+                return;
+            }
+
+            // Handle external file drop
+            const files = this.getDroppedFiles(e);
+            if (files.length > 0) {
+                await this.handleFileDrop(files, '/');
+            }
+        });
+    }
+
+    private getDroppedFiles(e: DragEvent): File[] {
+        const files: File[] = [];
+
+        if (e.dataTransfer?.files) {
+            for (let i = 0; i < e.dataTransfer.files.length; i++) {
+                files.push(e.dataTransfer.files[i]);
+            }
+        }
+
+        return files;
+    }
+
+    private async handleFileDrop(files: File[], targetFolder: string) {
+        if (!this.isConnected) {
+            new Notice('Not connected to device');
+            return;
+        }
+
+        console.log('[X4TreeView] Dropping', files.length, 'files to', targetFolder);
+
+        // Call the upload files callback
+        await this.uploadFilesCallback(files, targetFolder);
+
+        // Refresh the tree after upload
+        await this.refresh();
+    }
+
+    private async moveNode(node: TreeNode, targetFolder: string) {
+        if (!this.isConnected) {
+            new Notice('Not connected to device');
+            return;
+        }
+
+        // Construct destination path
+        let destPath: string;
+        if (targetFolder === '/' || targetFolder === '') {
+            destPath = '/' + node.name;
+        } else {
+            const cleanPath = targetFolder.startsWith('/') ? targetFolder : '/' + targetFolder;
+            destPath = cleanPath + '/' + node.name;
+        }
+
+        // Don't move if source and dest are the same
+        if (node.path === destPath) {
+            return;
+        }
+
+        // Don't allow moving a folder into itself
+        if (node.isDirectory && destPath.startsWith(node.path + '/')) {
+            new Notice('Cannot move folder into itself');
+            return;
+        }
+
+        const notice = new Notice(`Moving ${node.name}...`, 0);
+
+        try {
+            const uploader = this.getUploader();
+            const success = await uploader.moveItem(node.path, destPath);
+            notice.hide();
+
+            if (success) {
+                new Notice(`Moved ${node.name}`);
+                await this.refresh();
+            } else {
+                new Notice(`Failed to move ${node.name}`);
+            }
+        } catch (error) {
+            notice.hide();
+            console.error('[X4TreeView] Move error:', error);
+            new Notice(`Error moving ${node.name}`);
+        }
+    }
+
     private renderNode(node: TreeNode, parentEl: HTMLElement) {
         const itemEl = parentEl.createDiv({ cls: 'x4-tree-item' });
+
+        // Make items draggable (but not in selection mode)
+        if (!this.selectionMode) {
+            itemEl.setAttribute('draggable', 'true');
+
+            itemEl.addEventListener('dragstart', (e) => {
+                this.draggedNode = node;
+                itemEl.addClass('dragging');
+                if (e.dataTransfer) {
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', node.path);
+                }
+            });
+
+            itemEl.addEventListener('dragend', () => {
+                itemEl.removeClass('dragging');
+                this.draggedNode = null;
+                // Remove all drag-over classes
+                this.rootEl?.querySelectorAll('.drag-over').forEach(el => el.removeClass('drag-over'));
+            });
+        }
+
+        // Folders can receive drops
+        if (node.isDirectory) {
+            itemEl.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.dataTransfer) {
+                    e.dataTransfer.dropEffect = 'move';
+                }
+                // Don't allow dropping on self or parent
+                if (this.draggedNode && (this.draggedNode.path === node.path ||
+                    (this.draggedNode.isDirectory && node.path.startsWith(this.draggedNode.path + '/')))) {
+                    return;
+                }
+                itemEl.addClass('drag-over');
+            });
+
+            itemEl.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                itemEl.removeClass('drag-over');
+            });
+
+            itemEl.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                itemEl.removeClass('drag-over');
+
+                // Handle internal drag (move within tree)
+                if (this.draggedNode) {
+                    if (this.draggedNode.path !== node.path) {
+                        await this.moveNode(this.draggedNode, node.path);
+                    }
+                    this.draggedNode = null;
+                    return;
+                }
+
+                // Handle external file drop
+                const files = this.getDroppedFiles(e);
+                if (files.length > 0) {
+                    await this.handleFileDrop(files, node.path);
+                }
+            });
+        }
 
         // Add selected class if selected
         if (this.selectedItems.has(node.path)) {

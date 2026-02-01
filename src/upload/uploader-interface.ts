@@ -41,4 +41,28 @@ export interface Uploader {
      * @returns true if successful
      */
     createFolder(folderName: string, parentPath: string): Promise<boolean>;
+
+    /**
+     * Download a file from the device
+     * @param path - Path of the file to download
+     * @returns File data as ArrayBuffer or null if failed
+     */
+    downloadFile(path: string): Promise<ArrayBuffer | null>;
+
+    /**
+     * Move/rename a file or folder on the device
+     * @param sourcePath - Current path of the item
+     * @param destPath - Destination path
+     * @returns true if successful
+     */
+    moveItem(sourcePath: string, destPath: string): Promise<boolean>;
+
+    /**
+     * Upload a raw file (not EPUB conversion)
+     * @param data - File data as ArrayBuffer
+     * @param filename - Filename to use
+     * @param targetPath - Target folder path
+     * @returns true if successful
+     */
+    uploadRawFile(data: ArrayBuffer, filename: string, targetPath: string): Promise<boolean>;
 }

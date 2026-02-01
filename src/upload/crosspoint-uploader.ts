@@ -331,4 +331,105 @@ export class CrossPointUploader implements Uploader {
     private generateBoundary(): string {
         return '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
     }
+
+    /**
+     * Download a file from CrossPoint device
+     * Uses GET request to /download endpoint
+     */
+    async downloadFile(path: string): Promise<ArrayBuffer | null> {
+        try {
+            const url = `${this.baseUrl}/download?path=${encodeURIComponent(path)}`;
+            console.log('[CrossPoint] Downloading file from:', url);
+
+            const response = await requestUrl({
+                url: url,
+                method: 'GET',
+                throw: false
+            });
+
+            if (response.status >= 200 && response.status < 300) {
+                return response.arrayBuffer;
+            }
+            console.error('[CrossPoint] Failed to download file:', response.status);
+            return null;
+        } catch (error) {
+            console.error('[CrossPoint] Error downloading file:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Move/rename a file or folder on CrossPoint
+     * CrossPoint doesn't have a native move API, so we download, upload to new location, then delete original
+     */
+    async moveItem(sourcePath: string, destPath: string): Promise<boolean> {
+        try {
+            console.log('[CrossPoint] Moving item from', sourcePath, 'to', destPath);
+
+            // Download the file
+            const data = await this.downloadFile(sourcePath);
+            if (!data) {
+                console.error('[CrossPoint] Failed to download source file');
+                return false;
+            }
+
+            // Extract filename from destPath
+            const filename = destPath.split('/').pop() || 'file';
+            const targetDir = destPath.substring(0, destPath.lastIndexOf('/')) || '/';
+
+            // Upload to new location
+            const uploadSuccess = await this.uploadRawFile(data, filename, targetDir);
+            if (!uploadSuccess) {
+                console.error('[CrossPoint] Failed to upload to destination');
+                return false;
+            }
+
+            // Delete original
+            const deleteSuccess = await this.deleteItem(sourcePath);
+            if (!deleteSuccess) {
+                console.warn('[CrossPoint] Failed to delete original file (file was copied but original remains)');
+            }
+
+            return true;
+        } catch (error) {
+            console.error('[CrossPoint] Error moving item:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Upload a raw file (not EPUB conversion) to CrossPoint
+     */
+    async uploadRawFile(data: ArrayBuffer, filename: string, targetPath: string): Promise<boolean> {
+        try {
+            const boundary = this.generateBoundary();
+            const body = this.buildMultipartBody(data, filename, boundary);
+
+            // Normalize path
+            let uploadPath: string;
+            if (targetPath === '/' || targetPath === '') {
+                uploadPath = '/';
+            } else {
+                uploadPath = targetPath.startsWith('/') ? targetPath : '/' + targetPath;
+            }
+
+            const uploadUrl = `${this.uploadEndpoint}?path=${encodeURIComponent(uploadPath)}`;
+            console.log('[CrossPoint] Uploading raw file to:', uploadUrl);
+
+            const response = await requestUrl({
+                url: uploadUrl,
+                method: 'POST',
+                headers: {
+                    'Content-Type': `multipart/form-data; boundary=${boundary}`
+                },
+                body: body,
+                throw: false
+            });
+
+            return response.status >= 200 && response.status < 300;
+        } catch (error) {
+            console.error('[CrossPoint] Error uploading raw file:', error);
+            return false;
+        }
+    }
 }

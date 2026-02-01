@@ -339,4 +339,89 @@ export class X4Uploader implements Uploader {
     private generateBoundary(): string {
         return '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
     }
+
+    /**
+     * Download a file from X4 device
+     * Uses GET request to file path
+     */
+    async downloadFile(path: string): Promise<ArrayBuffer | null> {
+        try {
+            const url = `${this.baseUrl}${path}`;
+            console.log('[X4] Downloading file from:', url);
+
+            const response = await requestUrl({
+                url: url,
+                method: 'GET',
+                throw: false
+            });
+
+            if (response.status >= 200 && response.status < 300) {
+                return response.arrayBuffer;
+            }
+            console.error('[X4] Failed to download file:', response.status);
+            return null;
+        } catch (error) {
+            console.error('[X4] Error downloading file:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Move/rename a file or folder on X4
+     * X4 doesn't have a native move API, so we download, upload to new location, then delete original
+     */
+    async moveItem(sourcePath: string, destPath: string): Promise<boolean> {
+        try {
+            console.log('[X4] Moving item from', sourcePath, 'to', destPath);
+
+            // Download the file
+            const data = await this.downloadFile(sourcePath);
+            if (!data) {
+                console.error('[X4] Failed to download source file');
+                return false;
+            }
+
+            // Upload to new location
+            const uploadSuccess = await this.uploadFile(data, destPath);
+            if (!uploadSuccess.success) {
+                console.error('[X4] Failed to upload to destination');
+                return false;
+            }
+
+            // Delete original
+            const deleteSuccess = await this.deleteItem(sourcePath);
+            if (!deleteSuccess) {
+                console.warn('[X4] Failed to delete original file (file was copied but original remains)');
+            }
+
+            return true;
+        } catch (error) {
+            console.error('[X4] Error moving item:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Upload a raw file (not EPUB conversion) to X4
+     */
+    async uploadRawFile(data: ArrayBuffer, filename: string, targetPath: string): Promise<boolean> {
+        try {
+            // Build full path
+            let fullPath: string;
+            if (targetPath === '/' || targetPath === '') {
+                fullPath = `/${filename}`;
+            } else {
+                const cleanPath = targetPath.startsWith('/') ? targetPath : '/' + targetPath;
+                const normalizedPath = cleanPath.endsWith('/') ? cleanPath : cleanPath + '/';
+                fullPath = `${normalizedPath}${filename}`;
+            }
+
+            console.log('[X4] Uploading raw file to:', fullPath);
+            const result = await this.uploadFile(data, fullPath);
+            return result.success;
+        } catch (error) {
+            console.error('[X4] Error uploading raw file:', error);
+            return false;
+        }
+    }
 }
