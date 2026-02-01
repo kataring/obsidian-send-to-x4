@@ -120,21 +120,6 @@ export default class SendToX4Plugin extends Plugin {
             }
         });
 
-        // Add file menu item
-        this.registerEvent(
-            this.app.workspace.on('file-menu', (menu, file) => {
-                if (file instanceof TFile && file.extension === 'md') {
-                    menu.addItem((item) => {
-                        item.setTitle('Send to X4')
-                            .setIcon('upload')
-                            .onClick(() => {
-                                this.sendFile(file);
-                            });
-                    });
-                }
-            })
-        );
-
         console.log('Send to X4 plugin loaded');
     }
 
