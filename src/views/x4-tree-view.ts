@@ -2,11 +2,12 @@
  * X4 Tree View - Shows X4 device file structure in a sidebar
  */
 
-import { ItemView, WorkspaceLeaf, setIcon, Menu, Notice } from 'obsidian';
+import { ItemView, WorkspaceLeaf, setIcon, Menu, Notice, App } from 'obsidian';
 import { FileItem, SendToX4Settings } from '../types';
 import { Uploader } from '../upload/uploader-interface';
 import { X4Uploader } from '../upload/x4-uploader';
 import { CrossPointUploader } from '../upload/crosspoint-uploader';
+import { FilePreviewModal } from './file-preview-modal';
 
 export const X4_TREE_VIEW_TYPE = 'x4-tree-view';
 
@@ -654,15 +655,18 @@ export class X4TreeView extends ItemView {
                 this.showFileContextMenu(e, node);
             });
 
-            // Click handler for files in selection mode
-            if (this.selectionMode) {
-                itemEl.addEventListener('click', () => {
+            // Click handler for files
+            itemEl.addEventListener('click', () => {
+                if (this.selectionMode) {
                     const newState = !this.selectedItems.has(node.path);
                     this.toggleItemSelection(node, newState);
                     const checkbox = itemEl.querySelector('.x4-tree-item-checkbox') as HTMLInputElement;
                     if (checkbox) checkbox.checked = newState;
-                });
-            }
+                } else {
+                    // Open preview modal
+                    this.openFilePreview(node);
+                }
+            });
         }
 
         // Icon
@@ -691,6 +695,17 @@ export class X4TreeView extends ItemView {
                 this.renderNode(child, childrenEl);
             }
         }
+    }
+
+    private openFilePreview(node: TreeNode) {
+        if (!this.isConnected) {
+            new Notice('Not connected to device');
+            return;
+        }
+
+        const uploader = this.getUploader();
+        const modal = new FilePreviewModal(this.app, node.path, uploader);
+        modal.open();
     }
 
     private showFolderContextMenu(event: MouseEvent, node: TreeNode) {
@@ -731,6 +746,24 @@ export class X4TreeView extends ItemView {
         const menu = new Menu();
 
         menu.addItem((item) => {
+            item.setTitle('Preview')
+                .setIcon('eye')
+                .onClick(() => {
+                    this.openFilePreview(node);
+                });
+        });
+
+        menu.addItem((item) => {
+            item.setTitle('Download')
+                .setIcon('download')
+                .onClick(() => {
+                    this.downloadFileToLocal(node);
+                });
+        });
+
+        menu.addSeparator();
+
+        menu.addItem((item) => {
             item.setTitle('Delete file')
                 .setIcon('trash')
                 .onClick(() => {
@@ -739,6 +772,43 @@ export class X4TreeView extends ItemView {
         });
 
         menu.showAtMouseEvent(event);
+    }
+
+    private async downloadFileToLocal(node: TreeNode) {
+        if (!this.isConnected) {
+            new Notice('Not connected to device');
+            return;
+        }
+
+        const notice = new Notice(`Downloading ${node.name}...`, 0);
+
+        try {
+            const uploader = this.getUploader();
+            const data = await uploader.downloadFile(node.path);
+            notice.hide();
+
+            if (!data) {
+                new Notice(`Failed to download ${node.name}`);
+                return;
+            }
+
+            // Create download link
+            const blob = new Blob([data]);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = node.name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            new Notice(`Downloaded ${node.name}`);
+        } catch (error) {
+            notice.hide();
+            console.error('[X4TreeView] Download error:', error);
+            new Notice(`Error downloading ${node.name}`);
+        }
     }
 
     private async confirmAndDelete(node: TreeNode) {
