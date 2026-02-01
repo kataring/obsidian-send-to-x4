@@ -2,58 +2,76 @@ name: Release Obsidian Plugin
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+    paths:
+      - 'manifest.json'
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check if manifest.json version changed
+        id: check
+        run: |
+          # Get current and previous version
+          CURRENT_VERSION=$(jq -r '.version' manifest.json)
+          git show HEAD~1:manifest.json > /tmp/old_manifest.json 2>/dev/null || echo '{}' > /tmp/old_manifest.json
+          OLD_VERSION=$(jq -r '.version // "0.0.0"' /tmp/old_manifest.json)
+
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "old_version=$OLD_VERSION" >> $GITHUB_OUTPUT
+
+          if [ "$CURRENT_VERSION" != "$OLD_VERSION" ]; then
+            echo "Version changed from $OLD_VERSION to $CURRENT_VERSION"
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version unchanged ($CURRENT_VERSION)"
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Setup Node.js
+        if: steps.check.outputs.should_release == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
+        if: steps.check.outputs.should_release == 'true'
         run: npm ci
 
       - name: Build plugin
+        if: steps.check.outputs.should_release == 'true'
         run: npm run build
 
-      - name: Get version from tag
-        id: version
-        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
-      - name: Verify manifest version matches tag
-        run: |
-          MANIFEST_VERSION=$(jq -r '.version' manifest.json)
-          TAG_VERSION=${{ steps.version.outputs.version }}
-          if [ "$MANIFEST_VERSION" != "$TAG_VERSION" ]; then
-            echo "Error: manifest.json version ($MANIFEST_VERSION) does not match tag version ($TAG_VERSION)"
-            exit 1
-          fi
-
       - name: Create release zip
+        if: steps.check.outputs.should_release == 'true'
         run: |
-          zip -j send-to-x4-${{ steps.version.outputs.version }}.zip main.js manifest.json
+          VERSION=${{ steps.check.outputs.current_version }}
+          zip -j send-to-x4-${VERSION}.zip main.js manifest.json
           if [ -f styles.css ]; then
-            zip -j send-to-x4-${{ steps.version.outputs.version }}.zip styles.css
+            zip -j send-to-x4-${VERSION}.zip styles.css
           fi
 
-      - name: Create GitHub Release
+      - name: Create tag and GitHub Release
+        if: steps.check.outputs.should_release == 'true'
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: v${{ steps.check.outputs.current_version }}
+          name: v${{ steps.check.outputs.current_version }}
           files: |
             main.js
             manifest.json
-            send-to-x4-${{ steps.version.outputs.version }}.zip
+            send-to-x4-${{ steps.check.outputs.current_version }}.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
