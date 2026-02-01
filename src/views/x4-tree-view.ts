@@ -543,6 +543,12 @@ export class X4TreeView extends ItemView {
             return;
         }
 
+        // Show confirmation dialog
+        const confirmed = await this.confirmMove(node, targetFolder);
+        if (!confirmed) {
+            return;
+        }
+
         const notice = new Notice(`Moving ${node.name}...`, 0);
 
         try {
@@ -561,6 +567,88 @@ export class X4TreeView extends ItemView {
             console.error('[X4TreeView] Move error:', error);
             new Notice(`Error moving ${node.name}`);
         }
+    }
+
+    private confirmMove(node: TreeNode, targetFolder: string): Promise<boolean> {
+        return new Promise((resolve) => {
+            const itemType = node.isDirectory ? 'folder' : 'file';
+            const targetName = targetFolder === '/' ? 'root' : targetFolder;
+
+            const confirmEl = document.createElement('div');
+            confirmEl.className = 'x4-move-confirm';
+            confirmEl.innerHTML = `
+                <div class="x4-move-confirm-content">
+                    <p>Move ${itemType} "${node.name}" to ${targetName}?</p>
+                    <div class="x4-move-buttons">
+                        <button class="x4-move-cancel">Cancel</button>
+                        <button class="x4-move-confirm-btn">Move</button>
+                    </div>
+                </div>
+            `;
+
+            // Add styles
+            const style = document.createElement('style');
+            style.textContent = `
+                .x4-move-confirm {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1000;
+                }
+                .x4-move-confirm-content {
+                    background: var(--background-primary);
+                    padding: 20px;
+                    border-radius: 8px;
+                    max-width: 400px;
+                }
+                .x4-move-confirm-content p {
+                    margin: 0 0 16px 0;
+                }
+                .x4-move-buttons {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 8px;
+                }
+                .x4-move-confirm-btn {
+                    background: var(--interactive-accent);
+                    color: var(--text-on-accent);
+                }
+            `;
+            document.head.appendChild(style);
+            document.body.appendChild(confirmEl);
+
+            const cleanup = () => {
+                confirmEl.remove();
+                style.remove();
+            };
+
+            const cancelBtn = confirmEl.querySelector('.x4-move-cancel');
+            const confirmBtn = confirmEl.querySelector('.x4-move-confirm-btn');
+
+            cancelBtn?.addEventListener('click', () => {
+                cleanup();
+                resolve(false);
+            });
+
+            confirmBtn?.addEventListener('click', () => {
+                cleanup();
+                resolve(true);
+            });
+
+            // Close on click outside
+            confirmEl.addEventListener('click', (e) => {
+                if (e.target === confirmEl) {
+                    cleanup();
+                    resolve(false);
+                }
+            });
+        });
     }
 
     private renderNode(node: TreeNode, parentEl: HTMLElement) {
