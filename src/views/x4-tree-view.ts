@@ -1038,7 +1038,7 @@ export class X4TreeView extends ItemView {
             confirmBtn?.addEventListener('click', async () => {
                 const notice = new Notice(`Deleting ${node.name}...`, 0);
                 const uploader = this.getUploader();
-                const success = await uploader.deleteItem(node.path);
+                const success = await uploader.deleteItemRecursive(node.path);
                 notice.hide();
 
                 if (success) {
@@ -1229,9 +1229,9 @@ export class X4TreeView extends ItemView {
                 let successCount = 0;
                 let failCount = 0;
 
-                // Delete items one by one
+                // Delete items one by one (recursively for directories)
                 for (const path of this.selectedItems) {
-                    const success = await uploader.deleteItem(path);
+                    const success = await uploader.deleteItemRecursive(path);
                     if (success) {
                         successCount++;
                     } else {

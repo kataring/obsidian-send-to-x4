@@ -65,4 +65,12 @@ export interface Uploader {
      * @returns true if successful
      */
     uploadRawFile(data: ArrayBuffer, filename: string, targetPath: string): Promise<boolean>;
+
+    /**
+     * Delete a file or folder recursively
+     * For directories, deletes all contents before deleting the directory itself
+     * @param path - Path to delete
+     * @returns true if successful
+     */
+    deleteItemRecursive(path: string): Promise<boolean>;
 }

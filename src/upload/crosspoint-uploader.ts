@@ -432,4 +432,50 @@ export class CrossPointUploader implements Uploader {
             return false;
         }
     }
+
+    /**
+     * Delete a file or folder recursively
+     * For directories, deletes all contents before deleting the directory itself
+     */
+    async deleteItemRecursive(path: string): Promise<boolean> {
+        try {
+            // Get parent path and item name
+            const parentPath = path.substring(0, path.lastIndexOf('/')) || '/';
+            const name = path.substring(path.lastIndexOf('/') + 1);
+
+            // List parent directory to check if item is a directory
+            const items = await this.listDirectory(parentPath);
+            const item = items?.find(i => i.name === name);
+
+            if (!item) {
+                // Item doesn't exist, consider it a success
+                console.log('[CrossPoint] Item not found, nothing to delete:', path);
+                return true;
+            }
+
+            if (item.isDirectory) {
+                // List directory contents
+                const children = await this.listDirectory(path);
+                if (children && children.length > 0) {
+                    console.log('[CrossPoint] Deleting', children.length, 'items in', path);
+                    // Recursively delete each child
+                    for (const child of children) {
+                        const childPath = path + '/' + child.name;
+                        const success = await this.deleteItemRecursive(childPath);
+                        if (!success) {
+                            console.error('[CrossPoint] Failed to delete child:', childPath);
+                            // Continue trying to delete other items
+                        }
+                    }
+                }
+            }
+
+            // Delete the item itself
+            console.log('[CrossPoint] Deleting:', path);
+            return await this.deleteItem(path);
+        } catch (error) {
+            console.error('[CrossPoint] Error in recursive delete:', error);
+            return false;
+        }
+    }
 }
