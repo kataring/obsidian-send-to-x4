@@ -54,6 +54,19 @@ export class SendToX4SettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
+        containerEl.createEl('h3', { text: 'Filename' });
+
+        new Setting(containerEl)
+            .setName('Filename format')
+            .setDesc('Format for EPUB filenames. Available placeholders: {author}, {date}, {title}')
+            .addText(text => text
+                .setPlaceholder('{author} - {date} - {title}')
+                .setValue(this.plugin.settings.filenameFormat)
+                .onChange(async (value) => {
+                    this.plugin.settings.filenameFormat = value || '{author} - {date} - {title}';
+                    await this.plugin.saveSettings();
+                }));
+
         containerEl.createEl('h3', { text: 'Queue' });
 
         const queueItems = this.plugin.queueManager.getQueue();
