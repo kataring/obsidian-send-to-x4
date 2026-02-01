@@ -92,7 +92,7 @@ export class QueueManager {
 
             // Build EPUB
             const epubData = await this.epubBuilder.build(articleData);
-            const filename = this.epubBuilder.generateFilename(articleData);
+            const filename = this.epubBuilder.generateFilename(articleData, settings.filenameFormat);
             console.log('[QueueManager] EPUB built:', filename, 'size:', epubData.byteLength);
 
             // Get appropriate uploader
@@ -114,12 +114,12 @@ export class QueueManager {
     /**
      * Generate EPUB for download (without uploading)
      */
-    async generateEpub(file: TFile): Promise<{ data: ArrayBuffer; filename: string }> {
+    async generateEpub(file: TFile, filenameFormat?: string): Promise<{ data: ArrayBuffer; filename: string }> {
         const content = await this.app.vault.read(file);
         const articleData = await this.buildArticleData(file, content);
 
         const epubData = await this.epubBuilder.build(articleData);
-        const filename = this.epubBuilder.generateFilename(articleData);
+        const filename = this.epubBuilder.generateFilename(articleData, filenameFormat);
 
         return { data: epubData, filename };
     }

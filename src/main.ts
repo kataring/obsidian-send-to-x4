@@ -119,7 +119,7 @@ export default class SendToX4Plugin extends Plugin {
         const notice = new Notice(`Generating EPUB...`, 0);
 
         try {
-            const { data, filename } = await this.queueManager.generateEpub(activeFile);
+            const { data, filename } = await this.queueManager.generateEpub(activeFile, this.settings.filenameFormat);
 
             notice.hide();
 

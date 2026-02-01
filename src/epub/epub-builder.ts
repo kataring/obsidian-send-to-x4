@@ -52,33 +52,41 @@ export class EpubBuilder {
     }
 
     /**
-     * Generate a filename for the EPUB
-     * Format: author - YYYY-MM-DD - title.epub
+     * Generate a filename for the EPUB based on format string
+     * Format placeholders: {author}, {date}, {title}
      * @param article - Article data with title, author, date
+     * @param format - Format string with placeholders (default: '{author} - {date} - {title}')
      * @returns Sanitized filename
      */
-    generateFilename(article: ArticleData): string {
-        const parts: string[] = [];
-
-        // Add author if available
+    generateFilename(article: ArticleData, format: string = '{author} - {date} - {title}'): string {
+        // Prepare components
+        let cleanAuthor = '';
         if (article.author) {
-            const cleanAuthor = article.author.replace(/^@/, '').replace(/[^a-zA-Z0-9_\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/g, '');
-            if (cleanAuthor) {
-                parts.push(cleanAuthor);
-            }
+            cleanAuthor = article.author.replace(/^@/, '').replace(/[^a-zA-Z0-9_\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/g, '');
         }
 
-        // Add date (prefer extracted date, fallback to today)
         const date = article.date || new Date().toISOString().split('T')[0];
-        parts.push(date);
+        const safeTitle = sanitizeFilename(article.title, 40) || 'untitled';
 
-        // Add sanitized title
-        const safeTitle = sanitizeFilename(article.title, 40);
-        if (safeTitle) {
-            parts.push(safeTitle);
+        // Replace placeholders
+        let filename = format
+            .replace(/\{author\}/g, cleanAuthor)
+            .replace(/\{date\}/g, date)
+            .replace(/\{title\}/g, safeTitle);
+
+        // Clean up empty placeholders and extra separators
+        filename = filename
+            .replace(/\s*-\s*-\s*/g, ' - ')  // Remove double separators
+            .replace(/^\s*-\s*/, '')          // Remove leading separator
+            .replace(/\s*-\s*$/, '')          // Remove trailing separator
+            .trim();
+
+        // Fallback if filename is empty
+        if (!filename) {
+            filename = safeTitle || date;
         }
 
-        return parts.join(' - ') + '.epub';
+        return filename + '.epub';
     }
 
     /**
